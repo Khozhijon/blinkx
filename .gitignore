@@ -1,0 +1,9 @@
+.venv/
+.python/
+cache/
+__pycache__/
+*.pyc
+.DS_Store
+spike/sample_cutout.fits
+node_modules/
+.claude/
