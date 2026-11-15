@@ -70,6 +70,21 @@ space pauses. Because the wavelength varies across every SPHEREx exposure, Blink
 wavelength at your position from each file, pairs the closest ones and warns when two pictures
 differ in colour.
 
+## Sharing and science tools
+
+- **Sky Code**: one string (for example `SKY2.ZZBNaxtB…`, 200–400 characters) that stores the
+  field, its size, the colour band, the two pictures compared and every doodle. Paste it into the
+  page or open `…/?sky=<code>`; the same view opens, the search runs again, and the page says
+  whether it still finds the doodles the code lists.
+- **Exports**: the doodle map as PNG or SVG (picture + doodles + key), all data as JSON, and a CSV
+  with one row per doodle per epoch (id, type, x/y and RA/Dec, displacement in arcsec and SPHEREx
+  pixels, direction, rate, brightness change, confidence, known/candidate).
+- **Tracking Board**: every doodle in the field, filterable by type and by visit.
+- **Scientist view**: one switch that adds the raw numbers: a table of every exposure (DATE-OBS,
+  MJD, wavelength and bandwidth at the target, detector pixel, exposure, PSF, sky, noise, repaired
+  pixels, star-pattern shift), the doodle table and the export buttons.
+- **Keyboard**: `B` blink, `S` swipe, `D` difference, `T` time-lapse, `←`/`→` change the later epoch.
+
 ## The saved examples
 
 | Example | What you see | SPHEREx data |

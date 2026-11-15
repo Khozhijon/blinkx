@@ -716,6 +716,7 @@
   }
 
   async function runSearch(text) {
+    st.fromCode = null;
     const q = text.trim(); if (!q) { setStatus("Type a star or galaxy name, or coordinates.", true); return; }
     setStatus(`Looking up “${q}”…`);
     try {
@@ -901,13 +902,14 @@
       for (const ex of examples) {
         const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.dataset.slug = ex.slug;
         b.innerHTML = `<strong>${esc(ex.title)}</strong><span>${esc(ex.blurb)}</span>`; if (ex.simulated) b.classList.add("simulated");
-        b.addEventListener("click", () => { loadExample(ex.slug); $("viewer").scrollIntoView({ behavior: "smooth", block: "start" }); });
+        b.addEventListener("click", () => { st.fromCode = null; loadExample(ex.slug); $("viewer").scrollIntoView({ behavior: "smooth", block: "start" }); });
         box.appendChild(b);
       }
     } catch (_) { $("exampleList").innerHTML = '<span class="muted">Examples are unavailable.</span>'; }
 
     const p = new URLSearchParams(location.search), opts = { band: p.get("band"), size: p.get("size"), a: p.get("a"), b: p.get("b"), mode: p.get("mode") };
-    if (p.get("ex") && examples.some((e) => e.slug === p.get("ex"))) loadExample(p.get("ex"), opts);
+    if (p.get("sky") && BX.openSky) BX.openSky(p.get("sky")).then((ok) => { if (!ok && examples.length) loadExample(examples[0].slug); });
+    else if (p.get("ex") && examples.some((e) => e.slug === p.get("ex"))) loadExample(p.get("ex"), opts);
     else if (p.get("ra") && p.get("dec") && isFinite(+p.get("ra")) && isFinite(+p.get("dec"))) loadLive({ ra: +p.get("ra"), dec: +p.get("dec"), name: p.get("name") || "" }, opts);
     else if (p.get("q")) { $("q").value = p.get("q"); runSearch(p.get("q")); }
     else if (examples.length) loadExample(examples[0].slug);
@@ -923,7 +925,7 @@
 
   Object.assign(BX, {
     $, esc, api, getJson, toast, setStatus, fmtDate, fmtSexa, fmtGap, fmtWl, monthYear, skyToPix, pixToSky, byId, schedule, invalidate,
-    setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API,
+    setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive,
   });
   boot();
 })();

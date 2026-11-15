@@ -96,6 +96,7 @@
     if (!st.showDoodles || !st.doodles.length) return "";
     let s = "";
     for (const d of st.doodles) {
+      if (BX.doodleVisible && !BX.doodleVisible(d)) continue;
       const col = (TYPES[d.type] || TYPES.spark).color, picked = st.pickedDoodle === d.id, sw = (picked ? 1.5 : 0.9) * u, pts = d.points.map(pxOf);
       const inside = pts.some(([x, y]) => x >= 0 && y >= 0 && x <= n && y <= n); if (!inside) continue;
       const [x0, y0] = pts[0], [x1, y1] = pts[pts.length - 1];
@@ -149,7 +150,8 @@
       const known = st.doodles.filter((d) => d.status === "known").length;
       status.textContent = `${n} thing${n === 1 ? "" : "s"} changed in this patch of sky. ${known === n ? "All already known to astronomers." : `${n - known} not matched to a catalogue: candidate${n - known === 1 ? "" : "s"} only, never a discovery claim.`} Tap one to read its card.`;
     }
-    list.innerHTML = st.doodles.map((d) => `<button type="button" class="doodle${st.pickedDoodle === d.id ? " picked" : ""}" data-id="${esc(d.id)}">` +
+    const visible = st.doodles.filter((d) => !BX.doodleVisible || BX.doodleVisible(d));
+    list.innerHTML = visible.map((d) => `<button type="button" class="doodle${st.pickedDoodle === d.id ? " picked" : ""}" data-id="${esc(d.id)}">` +
       `<span class="g">${glyph(d, 54)}</span><span class="t"><strong>${esc(d.id)} · ${esc(d.nickname)}</strong>` +
       `<span>${esc((TYPES[d.type] || {}).label || d.type)}: ${esc(summary(d))}</span></span>${statusChip(d)}</button>`).join("");
     for (const b of list.querySelectorAll(".doodle")) b.addEventListener("click", () => openCard(b.dataset.id));

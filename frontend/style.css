@@ -317,3 +317,35 @@ label.inline input { width: 18px; height: 18px; accent-color: var(--accent); }
   background: #ff7a7a; color: #1a0508; padding: 2px 8px; border-radius: 6px; pointer-events: none; }
 
 .align-note { font-size: .8rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ================================================================== Tier 2: Sky Code, exports, board filters, scientist view */
+.sci-only, .sci-inline { display: none !important; }
+body.sci .sci-only { display: block !important; }
+body.sci .sci-inline { display: inline-block !important; }
+#sciBtn[aria-pressed="true"] { border-color: var(--a); color: var(--a); }
+.shortcuts { font-size: .78rem; }
+kbd { font: 600 .74rem ui-monospace, SFMono-Regular, Menlo, monospace; background: #17203a; border: 1px solid #33406a; border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--text); }
+@media (hover: none) { .shortcuts { display: none; } }
+
+.filters { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: .86rem; }
+.fchip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 12px; min-height: 32px; cursor: pointer; font-size: .82rem; font-weight: 600; color: var(--c, var(--text)); }
+.fchip[aria-pressed="true"] { background: color-mix(in srgb, var(--c, #8b7bff) 22%, transparent); border-color: var(--c, #8b7bff); }
+.filters select { min-height: 32px; padding: 3px 8px; width: auto; }
+
+.share-panel { display: grid; gap: 10px; }
+.sky-code { display: block; font: .78rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; background: #070a13; border: 1px dashed #44527a; border-radius: 10px; padding: 9px 11px; overflow-wrap: anywhere; max-height: 7.2em; overflow: auto; color: #cfe3ff; min-height: 2.6em; }
+.code-note { font-size: .86rem; padding: 7px 10px; border-radius: 10px; }
+.code-note.ok { background: #132a20; border: 1px solid #2c7a55; color: #9df2c3; }
+.code-note.warn { background: #2c2210; border: 1px solid #6e5220; color: #ffdfa6; }
+.open-code { display: flex; gap: 8px; } .open-code input { flex: 1; min-width: 0; }
+
+.table-scroll { overflow-x: auto; }
+.table-scroll table { border-collapse: collapse; font-size: .76rem; font-variant-numeric: tabular-nums; white-space: nowrap; width: 100%; }
+.table-scroll th, .table-scroll td { padding: 4px 9px; border-bottom: 1px solid var(--line); text-align: left; }
+.table-scroll th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+.table-scroll tr.is-a td:first-child { box-shadow: inset 3px 0 0 var(--a); } .table-scroll tr.is-b td:first-child { box-shadow: inset 3px 0 0 var(--b); }
+.linklike { background: none; border: 0; color: var(--a); cursor: pointer; padding: 0; font: inherit; text-decoration: underline; }
+.sci-panel { display: grid; gap: 8px; } .sci-panel h2 { font-size: 1.1rem; } .sci-panel p { font-size: .8rem; }
+#sciFrames { max-height: 420px; overflow: auto; }
+body.sci .sci-table[open], body.sci .sci-table { display: block; }
+@media (max-width: 640px) { .share-panel, .sci-panel { order: 2; } .top #sciBtn { order: 2; } }
