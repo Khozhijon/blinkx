@@ -24,7 +24,7 @@ infrared survey, in a browser, on a phone.
 | Search | Object name (CDS Sesame: SIMBAD → NED → VizieR) or coordinates in degrees / sexagesimal. Nearby stars are shifted from their year-2000 catalogue position to where they are now, using their catalogued proper motion. |
 | Epochs | All Level-2 spectral images covering the position (IRSA SIA2, collections `spherex_dr1`, `spherex_qr3` and the two `_deep` ones), grouped into visits. SPHEREx returns to most of the sky about every six months. |
 | Cutouts | 3′, 6′, 12′ or 24′ fields, resampled onto one north-up grid so every date lines up pixel for pixel. |
-| Compare | Blink (A ↔ B), side by side with a linked cursor, difference (B − A: orange = new, blue = gone), time-lapse with a slider. |
+| Compare | Blink (A ↔ B) with a speed slider, swipe, side by side with a linked cursor, difference (B − A: magenta = new or brighter, green = gone or dimmer), time-lapse with a slider. |
 | Colour band | Any of SPHEREx's six detector bands (0.75–5.0 µm). The exact wavelength of each exposure *at your position* is shown, because SPHEREx's filters vary across the detector. |
 | Display | Brightness, black level, three colour maps, optional brightness matching between dates, smooth or raw pixels. |
 | Examples | Preset targets saved as static files, so the demo still works if the archive is slow or down. |
