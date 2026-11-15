@@ -3,7 +3,7 @@
 **Watch the sky change in NASA's SPHEREx images.**
 A public web tool for the NASA Space Apps Challenge 2026 — *Planet X and SPHEREx* — by team **KhoFra**.
 
-**Created by Khozhiakbar Khakimov Furkatzhonovich and Franci Constanza Coyotl Cortes** (Team KhoFra, Boston).
+**Created by Khozhiakbar Khakimov Furkatzhonovich and Francia Constanza Coyotl Cortes** (Team KhoFra, Boston).
 
 Type a star or galaxy name (or RA/Dec), and Blink X finds every SPHEREx exposure of that spot,
 lines them up, and lets you **blink** between dates, put them **side by side**, **subtract** one
@@ -271,7 +271,7 @@ submission/  project summary, resources list, AI-use note, video script, slide o
 
 ## Credits and licence
 
-Created by Khozhiakbar Khakimov Furkatzhonovich and Franci Constanza Coyotl Cortes (team KhoFra) at the Boston local event, November 2026. Code is released under the MIT
+Created by Khozhiakbar Khakimov Furkatzhonovich and Francia Constanza Coyotl Cortes (team KhoFra) at the Boston local event, November 2026. Code is released under the MIT
 licence (see `LICENSE`). SPHEREx data are public NASA data; please credit NASA/JPL-Caltech/IPAC.
 This project is not affiliated with or endorsed by NASA.
 
