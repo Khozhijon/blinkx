@@ -1,0 +1,62 @@
+{
+ "errors": [],
+ "items": [
+  {
+   "svg": "<svg class=\"glyph\" viewBox=\"0 0 64 64\" width=\"60\" height=\"60\" role=\"img\" aria-label=\"Zigzag doodle\"><polyline points=\"12.3,34.1 28.2,43.5 28.0,25.1 43.8,34.4 43.7,16.0\" fill=\"none\" stroke=\"#F0E442\" stroke-width=\"3.1\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></polyline></svg>",
+   "name": "Zigzag",
+   "color": "rgb(240, 228, 66)",
+   "text": "Zigzag — A very distant worldSPHEREx sees each patch of sky from opposite sides of Earth's orbit, six months apart. Something far beyond Neptune seems to jump back and forth while it slowly drifts. A "
+  },
+  {
+   "svg": "<svg class=\"glyph\" viewBox=\"0 0 64 64\" width=\"60\" height=\"60\" role=\"img\" aria-label=\"Arrow doodle\"><line x1=\"15.755333660960808\" y1=\"41.37886248373993\" x2=\"48.24466633903919\" y2=\"22.62113751626007\" stroke=\"#56B4E9\" stroke-width=\"3.1\" stroke-linecap=\"round\"></line><path d=\"M44.3 30.7 L48.2 22.6 L39.3 22.0\" fill=\"none\" stroke=\"#56B4E9\" stroke-width=\"3.1\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path><circle cx=\"15.755333660960808\" cy=\"41.37886248373993\" r=\"2.8\" fill=\"#56B4E9\"></circle></svg>",
+   "name": "Arrow",
+   "color": "rgb(86, 180, 233)",
+   "text": "Arrow — A nearby star or brown dwarfIt is always there, but slides steadily in one direction from visit to visit. The closest stars do this."
+  },
+  {
+   "svg": "<svg class=\"glyph\" viewBox=\"0 0 64 64\" width=\"60\" height=\"60\" role=\"img\" aria-label=\"Spark doodle\"><line x1=\"21.5\" y1=\"38.1\" x2=\"31.1\" y2=\"32.5\" stroke=\"#E69F00\" stroke-width=\"2.5\" stroke-dasharray=\"3 3.5\" stroke-linecap=\"round\" opacity=\".85\"></line><line x1=\"38.06217782649107\" y1=\"28.5\" x2=\"50.1\" y2=\"28.5\" stroke=\"#E69F00\" stroke-width=\"2.8\" stroke-linecap=\"round\"></line><line x1=\"38.06217782649107\" y1=\"28.5\" x2=\"42.3\" y2=\"32.7\" stroke=\"#E69F00\" stroke-width=\"1.9\" stroke-linecap=\"round\"></line><line x1=\"38.06217782649107\" y1=\"28.5\" x2=\"38.1\" y2=\"40.5\" stroke=\"#E69F00\" stroke-width=\"2.8\" stroke-linecap=\"round\"></line><line x1=\"38.06217782649107\" y1=\"28.5\" x2=\"33.8\" y2=\"32.7\" stroke=\"#E69F00\" stroke-width=\"1.9\" stroke-linecap=\"round\"></line><line x1=\"38.06217782649107\" y1=\"28.5\" x2=\"26.1\" y2=\"28.5\" stroke=\"#E69F00\" stroke-width=\"2.8\" stroke-linecap=\"round\"></line><line x1=\"38.06217782649107\" y1=\"28.5\" x2=\"33.8\" y2=\"24.3\" stroke=\"#E69F00\" stroke-width=\"1.9\" stroke-linecap=\"round\"></line><line x1=\"38.06217782649107\" y1=\"28.5\" x2=\"38.1\" y2=\"16.5\" stroke=\"#E69F00\" stroke-width=\"2.8\" stroke-linecap=\"round\"></line><line x1=\"38.06217782649107\" y1=\"28.5\" x2=\"42.3\" y2=\"24.3\" stroke=\"#E69F00\" stroke-width=\"1.9\" stroke-linecap=\"round\"></line></svg>",
+   "name": "Spark",
+   "color": "rgb(230, 159, 0)",
+   "text": "Spark — An asteroid passing throughSeen during one visit only, crossing the stars within hours, then gone."
+  },
+  {
+   "svg": "<svg class=\"glyph\" viewBox=\"0 0 64 64\" width=\"60\" height=\"60\" role=\"img\" aria-label=\"Comet tail doodle\"><path d=\"M41.1 26.7 Q29.2 33.6 26.4 47.1\" fill=\"none\" stroke=\"#2FBF91\" stroke-width=\"1.9\" stroke-linecap=\"round\" opacity=\"0.7\"></path><path d=\"M41.1 26.7 Q29.2 33.6 19.4 39.3\" fill=\"none\" stroke=\"#2FBF91\" stroke-width=\"2.8\" stroke-linecap=\"round\" opacity=\"1\"></path><path d=\"M41.1 26.7 Q29.2 33.6 16.2 29.3\" fill=\"none\" stroke=\"#2FBF91\" stroke-width=\"1.9\" stroke-linecap=\"round\" opacity=\"0.7\"></path><circle cx=\"41.1\" cy=\"26.7\" r=\"5.4\" fill=\"#2FBF91\"></circle></svg>",
+   "name": "Comet tail",
+   "color": "rgb(47, 191, 145)",
+   "text": "Comet tail — A cometLike a spark, but fuzzy: a cloud of gas and dust, often with a tail."
+  },
+  {
+   "svg": "<svg class=\"glyph\" viewBox=\"0 0 64 64\" width=\"60\" height=\"60\" role=\"img\" aria-label=\"Pulse doodle\"><circle cx=\"32\" cy=\"32\" r=\"6\" fill=\"none\" stroke=\"#CC79A7\" stroke-width=\"1.7\" opacity=\"0.45\"></circle><circle cx=\"32\" cy=\"32\" r=\"13\" fill=\"none\" stroke=\"#CC79A7\" stroke-width=\"2.3\" opacity=\"0.75\"></circle><circle cx=\"32\" cy=\"32\" r=\"20\" fill=\"none\" stroke=\"#CC79A7\" stroke-width=\"2.9\" opacity=\"1\"></circle><circle cx=\"32\" cy=\"32\" r=\"2.2\" fill=\"#CC79A7\"></circle></svg>",
+   "name": "Pulse",
+   "color": "rgb(204, 121, 167)",
+   "text": "Pulse — A star that changes brightnessIt stays in place but gets brighter or dimmer, appears or fades."
+  }
+ ],
+ "types": {
+  "zigzag": {
+   "label": "Zigzag",
+   "color": "#F0E442",
+   "what": "A very distant world"
+  },
+  "arrow": {
+   "label": "Arrow",
+   "color": "#56B4E9",
+   "what": "A nearby star or brown dwarf"
+  },
+  "spark": {
+   "label": "Spark",
+   "color": "#E69F00",
+   "what": "An asteroid passing through"
+  },
+  "tail": {
+   "label": "Comet tail",
+   "color": "#2FBF91",
+   "what": "A comet"
+  },
+  "pulse": {
+   "label": "Pulse",
+   "color": "#CC79A7",
+   "what": "A star that changes brightness"
+  }
+ }
+}
