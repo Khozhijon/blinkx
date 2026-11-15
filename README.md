@@ -10,7 +10,8 @@ stars — pop out. It is the 1930 blink comparator that found Pluto, pointed at 
 infrared survey, in a browser, on a phone.
 
 - **Live demo:** <https://khozhijon.github.io/blinkx/> (the saved examples open instantly; live search
-  of the whole archive runs on a small free server that needs about a minute to wake up)
+  of the whole archive runs on a small free server, <https://blinkx-khofra.onrender.com>, that needs about
+  a minute to wake up when nobody has used it for a while)
 - **Data:** real SPHEREx Level-2 spectral images from NASA/IPAC IRSA. Every date shown is the
   `DATE-OBS` keyword of the FITS file it came from. Nothing is simulated.
 

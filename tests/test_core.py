@@ -168,6 +168,7 @@ def test_search_falls_back_to_saved_result_when_irsa_is_down(tmp_path, monkeypat
         raise sx.ArchiveError("simulated outage")
 
     monkeypatch.setattr(sx, "_sia_all", down)
+    monkeypatch.setattr(sx, "_irsa_down_until", 0.0)
     res = sx.search(10.0, 20.0)
     assert res["stale"] is True and res["exposures"] == rows
     assert sx.band_exposures(10.0, 20.0, 2)["stale"] is True
@@ -178,3 +179,14 @@ def test_search_falls_back_to_saved_result_when_irsa_is_down(tmp_path, monkeypat
     monkeypatch.setattr(sx, "_sia_all", lambda ra, dec, detector=None: {"exposures": rows * 1, "truncated": False})
     res = sx.search(11.0, 20.0)
     assert "stale" not in res and cache.get_json("sia3/11.00000_20.00000") is not None
+
+
+def test_warm_up_never_raises(monkeypatch):
+    class Boom:
+        def head(self, *a, **k):
+            raise RuntimeError("no network in tests")
+
+    monkeypatch.setattr(sx, "client", lambda: Boom())
+    monkeypatch.setattr(sx, "WARM", False)
+    sx.warm_up()
+    assert sx.WARM is True

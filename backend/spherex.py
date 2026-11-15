@@ -192,6 +192,46 @@ def _sia_all(ra: float, dec: float, detector: int | None = None) -> dict:
     return {"exposures": rows, "truncated": truncated}
 
 
+_irsa_down_until = 0.0  # after a failed search, serve saved results for a few minutes without retrying
+
+
+def _irsa_recently_failed() -> bool:
+    return time.time() < _irsa_down_until
+
+
+def _note_irsa_failure() -> None:
+    global _irsa_down_until
+    _irsa_down_until = time.time() + 300.0
+
+
+def warm_up() -> None:
+    """Pay the slow one-off costs (imports, first WCS, TLS handshake) before the first visitor does.
+
+    On a small free server these add 20-30 s to the first request after it wakes.
+    """
+    global WARM
+    try:
+        from astropy.io.fits.hdu.compressed._codecs import Rice1  # noqa: F401
+
+        h = fits.Header()
+        for k, v in {
+            "NAXIS": 2, "NAXIS1": 2040, "NAXIS2": 2040, "CTYPE1": "RA---TAN-SIP", "CTYPE2": "DEC--TAN-SIP",
+            "CRPIX1": 1020.5, "CRPIX2": 1020.5, "CRVAL1": 10.0, "CRVAL2": 20.0, "CUNIT1": "deg", "CUNIT2": "deg",
+            "PC1_1": 0.0017, "PC1_2": 0.0, "PC2_1": 0.0, "PC2_2": -0.0017, "CDELT1": 1.0, "CDELT2": 1.0,
+            "A_ORDER": 2, "A_2_0": 1e-7, "B_ORDER": 2, "B_0_2": 1e-7, "AP_ORDER": 2, "AP_2_0": -1e-7, "BP_ORDER": 2, "BP_0_2": -1e-7,
+        }.items():
+            h[k] = v
+        WCS(h).all_world2pix([[10.01, 20.01]], 0, quiet=True)
+        _tangent_grid(10.0, 20.0, 0.1, 16)
+        client().head(S3_BASE, timeout=10.0)
+    except Exception:  # noqa: BLE001 - warming is best-effort
+        pass
+    WARM = True
+
+
+WARM = False
+
+
 def search(ra: float, dec: float) -> dict:
     """SPHEREx Level-2 spectral images whose footprint contains (ra, dec), oldest first.
 
@@ -203,10 +243,13 @@ def search(ra: float, dec: float) -> dict:
     hit = cache.get_json(ck, max_age=6 * 3600)
     if hit is not None:
         return hit
+    old = cache.get_json_stale(ck)
+    if old is not None and _irsa_recently_failed():
+        return {**old, "stale": True}
     try:
         res = _sia_all(ra, dec)
     except ArchiveError:
-        old = cache.get_json_stale(ck)
+        _note_irsa_failure()
         if old is None:
             raise
         return {**old, "stale": True}

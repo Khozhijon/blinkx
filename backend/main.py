@@ -6,7 +6,9 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from astropy.time import Time
@@ -23,7 +25,13 @@ FRONTEND = ROOT / "frontend"
 MAX_SIZE_DEG = 0.4
 VISIT_GAP_DAYS = 20.0
 
-app = FastAPI(title="Blink X", description="How the SPHEREx sky changes over time", version="1.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    threading.Thread(target=sx.warm_up, daemon=True).start()  # do not block start-up or the health check
+    yield
+
+
+app = FastAPI(title="Blink X", description="How the SPHEREx sky changes over time", version="1.0", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(
     CORSMiddleware,
@@ -67,7 +75,7 @@ def _visits(exposures: list[dict]) -> list[dict]:
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "time": time.time()}
+    return {"ok": True, "warm": sx.WARM, "time": time.time()}
 
 
 @app.get("/api/resolve")

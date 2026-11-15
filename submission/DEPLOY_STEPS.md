@@ -1,31 +1,14 @@
-# Public URL — status and the one step left for you
+# Public URL — status
 
 | Step | Status |
 |---|---|
 | GitHub repository | Done: <https://github.com/Khozhijon/blinkx> (public) |
-| Static page on GitHub Pages | Done: <https://khozhijon.github.io/blinkx/> — the saved examples work now |
-| Backend on Render (live search of the whole archive) | **Needs you** — see below |
-| Demo video | Needs you — `submission/VIDEO_SCRIPT.md` |
-| Space Apps submission form | Needs you |
+| Static page on GitHub Pages | Done: <https://khozhijon.github.io/blinkx/> |
+| Backend on Render (free plan) | Done: <https://blinkx-khofra.onrender.com> (service `blinkx-khofra`, blueprint `blinkx`) |
+| Demo video | **Needs you** — `submission/VIDEO_SCRIPT.md` |
+| Space Apps submission form | **Needs you** |
 
-## Deploy the backend on Render (about 4 clicks, free plan)
-
-1. Open <https://render.com/deploy?repo=https://github.com/Khozhijon/blinkx>
-2. Press **GitHub** to sign in. The first time, Render asks to read your repositories: allow the
-   `blinkx` repo (or all).
-3. Render shows the blueprint "blinkx-khofra" on the **Free** plan. Press **Deploy Blueprint** / **Apply**.
-   If Render asks for a payment card, stop and tell Claude: the blueprint only asks for the free plan.
-4. Wait 3–5 minutes for the first build. The address should be
-   `https://blinkx-khofra.onrender.com`. If Render shows a different address, tell Claude: one
-   line in `frontend/config.js` must match it.
-
-When it is up, the GitHub Pages site switches from "Live search is offline" to "Live search … is
-ready" by itself. The Render address also serves the whole tool on its own.
-
-A free Render service sleeps after 15 minutes without visitors and needs about a minute to wake;
-that is why the GitHub Pages address is the better **demo URL**: it opens at once.
-
-## Submission form
+## What to put in the submission form
 
 - Demo URL: `https://khozhijon.github.io/blinkx/`
 - Repository: `https://github.com/Khozhijon/blinkx`
@@ -34,8 +17,22 @@ that is why the GitHub Pages address is the better **demo URL**: it opens at onc
 - AI use: `submission/AI_USE.md`
 - Video: record it from `submission/VIDEO_SCRIPT.md`; slides from `submission/SLIDES.md`
 
+## Good to know before judging
+
+- Use the GitHub Pages address as the demo URL. It opens at once with the saved examples. The
+  Render server sleeps after 15 minutes without visitors; the page wakes it in the background
+  (about a minute), and says so next to the search box.
+- Before recording the video or presenting, open the page a few minutes early and run one search,
+  so the server is awake and the search is cached.
+- If NASA's archive search (IRSA) is slow or down, live search says so and falls back to saved
+  results for well-known targets; the examples are not affected.
+- Render will show "Upgrade" offers in its dashboard. The service is on the Free plan; nothing in
+  this project needs a paid plan.
+
 ## Updating the site later
 
 ```bash
 git push origin main && sh scripts/publish_pages.sh
 ```
+
+A push to `main` redeploys the Render backend; `publish_pages.sh` updates the GitHub Pages copy.
