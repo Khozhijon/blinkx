@@ -57,6 +57,16 @@
     const p = (v, n = 2) => String(v).padStart(n, "0");
     return `${p(hh)}h ${p(mm)}m ${p(ss.toFixed(1), 4)}s  ${sgn}${p(dd)}° ${p(dm)}′ ${p(ds.toFixed(0))}″`;
   }
+  /** Short sky coordinates for the grid labels on the picture. */
+  function fmtRaShort(ra, secs) {
+    const h = (((ra % 360) + 360) % 360) / 15, t = Math.round(h * 3600), hh = Math.floor(t / 3600) % 24, mm = Math.floor((t % 3600) / 60), ss = t % 60, p = (v) => String(v).padStart(2, "0");
+    return secs ? `${p(hh)}h${p(mm)}m${p(ss)}s` : `${p(hh)}h${p(mm)}m${p(ss)}s`;
+  }
+  function fmtDecShort(dec, secs) {
+    const t = Math.round(Math.abs(dec) * 3600), dd = Math.floor(t / 3600), mm = Math.floor((t % 3600) / 60), ss = t % 60, p = (v) => String(v).padStart(2, "0");
+    return `${dec < 0 ? "−" : "+"}${p(dd)}°${p(mm)}′` + (secs || ss ? `${p(ss)}″` : "");
+  }
+  const stamp = (iso) => iso ? `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC` : "";
   function fmtGap(days) {
     const d = Math.abs(days);
     if (d < 1 / 24) return `${Math.round(d * 1440)} minutes`;
@@ -270,7 +280,7 @@
     let cap0 = "", cap1 = "";
     // two pictures from the same day are told apart by their time
     const sameDay = !!(A && B && A !== B && (A.date_obs || "").slice(0, 10) === (B.date_obs || "").slice(0, 10));
-    const label = (f) => f ? `${fmtDate(f.date_obs, sameDay)} · ${fmtWl(f)}` : "";
+    const label = (f) => f ? `${stamp(f.date_obs)}  ·  ${fmtWl(f)}` : "";
     if (st.mode === "side") {
       need.push(A, B);
       if (A && A.z) paint(0, frameCanvas(A, 1), A); else blank(0);
@@ -279,11 +289,11 @@
     } else if (st.mode === "diff") {
       need.push(A, B);
       if (A && B && A.z && B.z) paint(0, diffCanvas(A, B)); else blank(0);
-      cap0 = `<span class="tag d">B − A</span>${esc(fmtDate(B && B.date_obs, sameDay))} minus ${esc(fmtDate(A && A.date_obs, sameDay))}`;
+      cap0 = `<span class="tag d">B − A</span>${esc(stamp(B && B.date_obs))}  −  ${esc(stamp(A && A.date_obs))}`;
     } else if (st.mode === "time") {
       const f = st.frames[st.timeIdx]; need.push(f);
       if (f && f.z) paint(0, frameCanvas(f, scaleFor(f, A && A.z ? A : null)), f); else blank(0);
-      cap0 = `<span class="tag t">${st.timeIdx + 1} / ${st.frames.length}</span>${esc(f ? `${fmtDate(f.date_obs)} · ${fmtWl(f)}` : "")}`;
+      cap0 = `<span class="tag t">${st.timeIdx + 1} / ${st.frames.length}</span>${esc(f ? `${stamp(f.date_obs)}  ·  ${fmtWl(f)}` : "")}`;
       $("timeOut").textContent = `${st.timeIdx + 1} of ${st.frames.length}`;
       if (+$("timeSlider").value !== st.timeIdx) $("timeSlider").value = st.timeIdx;
     } else if (st.mode === "swipe") {
@@ -308,27 +318,48 @@
     markStrip(vis);
   }
 
+  /** One overlay unit = 5 CSS pixels on screen, whatever the grid size or the size of the picture. */
+  function unit(pane = 0) { const w = $("pane" + pane).clientWidth || $("pane0").clientWidth || 640; return (st.n / w) * 5; }
+
   function drawOverlay(pane, f) {
     const svg = $("ov" + pane), n = st.n;
     svg.setAttribute("viewBox", `0 0 ${n} ${n}`);
-    const u = n / 128, fs = 4.2 * u, sw = 0.45 * u; let s = "";
-    const light = st.cmap === "invert" && st.mode !== "diff", ink = light ? "#111" : "#fff";
+    const u = unit(pane), fs = 2.2 * u, sw = 0.24 * u; let s = "";
+    const light = st.cmap === "invert" && st.mode !== "diff", ink = light ? "#111" : "#efe9dd";
+    const bone = light ? "#111" : "#efe9dd", faint = light ? "rgba(0,0,0,.22)" : "rgba(239,233,221,.13)", hair = 0.2 * u, lf = 2.2 * u;
+    const sizeAs = st.size * 3600, pxPer = n / sizeAs, c = n / 2;
     if (st.cross) {
-      const c = n / 2, g = 4.5 * u, l = 6.5 * u;
-      const lines = `<line x1="${c - g - l}" y1="${c}" x2="${c - g}" y2="${c}"/><line x1="${c + g}" y1="${c}" x2="${c + g + l}" y2="${c}"/>` +
-        `<line x1="${c}" y1="${c - g - l}" x2="${c}" y2="${c - g}"/><line x1="${c}" y1="${c + g}" x2="${c}" y2="${c + g + l}"/>`;
-      s += `<g stroke="${light ? "#fff" : "#000"}" stroke-opacity=".55" stroke-width="${sw * 2.4}" stroke-linecap="round">${lines}</g>` +
-        `<g stroke="${ink}" stroke-opacity=".9" stroke-width="${sw}">${lines}</g>`;
+      // coordinate grid: a line every `step` arcseconds from the centre, with ticks on all four edges
+      const step = sizeAs <= 200 ? 30 : sizeAs <= 400 ? 60 : sizeAs <= 800 ? 120 : 300, kmax = Math.floor(sizeAs / 2 / step);
+      let grid = "", ticks = "", labels = "";
+      for (let k = -kmax; k <= kmax; k++) {
+        const q = (c + k * step * pxPer).toFixed(2), tl = (k % 2 === 0 ? 2.4 : 1.4) * u;
+        if (k) grid += `<line x1="${q}" y1="0" x2="${q}" y2="${n}"/><line x1="0" y1="${q}" x2="${n}" y2="${q}"/>`;
+        ticks += `<line x1="${q}" y1="${n}" x2="${q}" y2="${n - tl}"/><line x1="${q}" y1="0" x2="${q}" y2="${tl}"/><line x1="0" y1="${q}" x2="${tl}" y2="${q}"/><line x1="${n}" y1="${q}" x2="${n - tl}" y2="${q}"/>`;
+      }
+      // RA along the bottom edge, Dec up the left edge (real sky coordinates of those grid lines)
+      const kl = Math.min(2, kmax), secs = step < 60;
+      for (const k of [-kl, 0, kl]) {
+        const raLabel = k <= 0;                               // the bottom-right corner belongs to the scale bar
+        const q = c + k * step * pxPer, [ra] = pixToSky(q - 0.5, c - 0.5), [, dec] = pixToSky(c - 0.5, q - 0.5);
+        labels += (raLabel ? `<text x="${q.toFixed(1)}" y="${(n - 3.4 * u).toFixed(1)}" text-anchor="middle" style="font-size:${lf}px">${fmtRaShort(ra, secs)}</text>` : "") +
+          `<text x="${(3.4 * u).toFixed(1)}" y="${(q - 1.1 * u).toFixed(1)}" style="font-size:${lf}px">${fmtDecShort(dec, secs)}</text>`;
+      }
+      const r1 = 4.4 * u, r2 = 7.6 * u, br = 5 * u, e = 1.2 * u;
+      const ret = `<circle cx="${c}" cy="${c}" r="${r1}" fill="none"/><line x1="${c - r2}" y1="${c}" x2="${c - r1}" y2="${c}"/><line x1="${c + r1}" y1="${c}" x2="${c + r2}" y2="${c}"/><line x1="${c}" y1="${c - r2}" x2="${c}" y2="${c - r1}"/><line x1="${c}" y1="${c + r1}" x2="${c}" y2="${c + r2}"/>`;
+      const brackets = `<path d="M${e} ${e + br}V${e}H${e + br}M${n - e - br} ${e}H${n - e}V${e + br}M${n - e} ${n - e - br}V${n - e}H${n - e - br}M${e + br} ${n - e}H${e}V${n - e - br}" fill="none"/>`;
+      s += `<g stroke="${faint}" stroke-width="${hair}">${grid}</g><g stroke="${bone}" stroke-width="${hair * 1.5}" stroke-opacity=".85">${ticks}${brackets}</g>` +
+        `<g stroke="${light ? "#fff" : "#000"}" stroke-opacity=".55" stroke-width="${hair * 4.2}">${ret}</g><g stroke="${bone}" stroke-width="${hair * 1.6}">${ret}</g>` +
+        `<g fill="${bone}" fill-opacity=".86">${labels}</g>`;
     }
-    // scale bar (bottom right) and compass (bottom left)
-    const arcsec = st.size <= 0.05 ? 30 : st.size <= 0.1 ? 60 : st.size <= 0.2 ? 120 : 300, len = arcsec / (st.size * 3600 / n);
-    const bx = n - 5 * u - len, by = n - 6 * u;
-    s += `<g stroke="${ink}" stroke-width="${sw * 1.6}" fill="${ink}"><line x1="${bx}" y1="${by}" x2="${bx + len}" y2="${by}"/>` +
-      `<text x="${bx + len / 2}" y="${by - 2 * u}" text-anchor="middle" stroke="none" style="font-size:${fs}px">${arcsec >= 60 ? arcsec / 60 + "′" : arcsec + "″"}</text></g>`;
-    const cx = 13 * u, cy = n - 7 * u, al = 9 * u;
-    s += `<g stroke="${ink}" stroke-width="${sw * 1.4}" fill="${ink}" stroke-linecap="round"><line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - al}"/><line x1="${cx}" y1="${cy}" x2="${cx - al}" y2="${cy}"/>` +
-      `<text x="${cx}" y="${cy - al - 1.5 * u}" text-anchor="middle" stroke="none" style="font-size:${fs}px">N</text>` +
-      `<text x="${cx - al - 1.5 * u}" y="${cy + 1.5 * u}" text-anchor="end" stroke="none" style="font-size:${fs}px">E</text></g>`;
+    // scale bar (bottom right, above the RA labels) and compass (top right, under the caption)
+    const arcsec = st.size <= 0.05 ? 30 : st.size <= 0.1 ? 60 : st.size <= 0.2 ? 120 : 300, len = arcsec * pxPer, bx = n - 4 * u - len, by = n - 4 * u;
+    s += `<g stroke="${bone}" stroke-width="${hair * 2}" fill="${bone}"><path d="M${bx} ${by - 1.2 * u}V${by}H${bx + len}V${by - 1.2 * u}" fill="none"/>` +
+      `<text x="${bx + len / 2}" y="${by - 1.8 * u}" text-anchor="middle" stroke="none" style="font-size:${lf}px">${arcsec >= 60 ? arcsec / 60 + "′" : arcsec + "″"}</text></g>`;
+    const cx = n - 5 * u, cy = 15 * u, al = 5 * u;
+    s += `<g stroke="${bone}" stroke-width="${hair * 1.8}" fill="${bone}" stroke-linecap="square"><path d="M${cx} ${cy - al}V${cy}H${cx - al}" fill="none"/>` +
+      `<text x="${cx}" y="${cy - al - 1.1 * u}" text-anchor="middle" stroke="none" style="font-size:${lf}px">N</text>` +
+      `<text x="${cx - al - 1.1 * u}" y="${cy + 0.8 * u}" text-anchor="end" stroke="none" style="font-size:${lf}px">E</text></g>`;
     // catalogued solar-system objects at the moment this frame was taken
     if (st.known && f) {
       const objs = knownFor(f);
@@ -336,24 +367,24 @@
         const [i, j] = skyToPix(o.ra, o.dec);
         if (i < 0 || j < 0 || i > n - 1 || j > n - 1) continue;
         const name = o.number ? `(${o.number}) ${o.name}` : o.name;
-        s += `<circle cx="${i + 0.5}" cy="${j + 0.5}" r="${5 * u}" fill="none" stroke="#7CFFB2" stroke-width="${sw * 1.3}"/>` +
-          `<text x="${i + 0.5}" y="${j + 0.5 - 7 * u}" text-anchor="middle" fill="#7CFFB2" style="font-size:${fs}px">${esc(name)}</text>`;
+        s += `<circle cx="${i + 0.5}" cy="${j + 0.5}" r="${5 * u}" fill="none" stroke="#efe9dd" stroke-width="${sw * 1.3}"/>` +
+          `<text x="${i + 0.5}" y="${j + 0.5 - 7 * u}" text-anchor="middle" fill="#efe9dd" style="font-size:${fs}px">${esc(name)}</text>`;
       }
     }
     st.marks.forEach((m, k) => {
       const [i, j] = skyToPix(m.ra, m.dec), r = 4 * u;
       if (i < 0 || j < 0 || i > n - 1 || j > n - 1) return;
-      s += `<rect x="${i + 0.5 - r}" y="${j + 0.5 - r}" width="${2 * r}" height="${2 * r}" fill="none" stroke="#ff5fa2" stroke-width="${sw * 1.4}" transform="rotate(45 ${i + 0.5} ${j + 0.5})"/>` +
-        `<text x="${i + 0.5 + r * 1.6}" y="${j + 0.5 + fs / 3}" fill="#ff5fa2" style="font-size:${fs}px">${k + 1}</text>`;
+      s += `<rect x="${i + 0.5 - r}" y="${j + 0.5 - r}" width="${2 * r}" height="${2 * r}" fill="none" stroke="#ff5a1f" stroke-width="${sw * 1.4}" transform="rotate(45 ${i + 0.5} ${j + 0.5})"/>` +
+        `<text x="${i + 0.5 + r * 1.6}" y="${j + 0.5 + fs / 3}" fill="#ff5a1f" style="font-size:${fs}px">${k + 1}</text>`;
     });
     if (st.hover && st.hover.pane !== pane && st.mode === "side") {
-      s += `<circle cx="${st.hover.i}" cy="${st.hover.j}" r="${3.5 * u}" fill="none" stroke="#ffe36e" stroke-width="${sw * 1.3}"/>`;
+      s += `<circle cx="${st.hover.i}" cy="${st.hover.j}" r="${3.5 * u}" fill="none" stroke="#efe9dd" stroke-width="${sw * 1.3}"/>`;
     }
     if (st.mode === "swipe" && pane === 0) {
       const x = st.split * n;
-      s += `<line x1="${x}" y1="0" x2="${x}" y2="${n}" stroke="#fff" stroke-width="${sw * 1.6}"/>` +
-        `<circle cx="${x}" cy="${n / 2}" r="${5.5 * u}" fill="#fff" stroke="#000" stroke-opacity=".5" stroke-width="${sw}"/>` +
-        `<path d="M${x - 1.2 * u} ${n / 2 - 2.2 * u} l${-2.4 * u} ${2.2 * u} l${2.4 * u} ${2.2 * u} M${x + 1.2 * u} ${n / 2 - 2.2 * u} l${2.4 * u} ${2.2 * u} l${-2.4 * u} ${2.2 * u}" fill="none" stroke="#111" stroke-width="${sw * 1.6}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      s += `<line x1="${x}" y1="0" x2="${x}" y2="${n}" stroke="#ff5a1f" stroke-width="${sw * 1.5}"/>` +
+        `<rect x="${x - 2.8 * u}" y="${n / 2 - 4.4 * u}" width="${5.6 * u}" height="${8.8 * u}" fill="#ff5a1f"/>` +
+        `<path d="M${x - 0.5 * u} ${n / 2 - 1.5 * u} l${-1.5 * u} ${1.5 * u} l${1.5 * u} ${1.5 * u} M${x + 0.5 * u} ${n / 2 - 1.5 * u} l${1.5 * u} ${1.5 * u} l${-1.5 * u} ${1.5 * u}" fill="none" stroke="#150703" stroke-width="${sw * 2}" stroke-linecap="square" stroke-linejoin="miter"/>`;
     }
     if (BX.hooks.overlay) s += BX.hooks.overlay(pane, f, u, n) || "";
     svg.innerHTML = s;
@@ -519,7 +550,24 @@
     const anim = mode === "blink" || mode === "time";
     $("playBtn").hidden = !anim; $("speedWrap").hidden = !anim; $("timeWrap").hidden = mode !== "time";
     if (mode === "time") { const i = st.frames.findIndex((f) => f.id === st.a); if (i >= 0 && !st.playing) st.timeIdx = i; }
+    if (mode === "swipe") openSwipe();
     restartTimer(); updateFacts(); schedule(); syncUrl();
+  }
+
+  const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  /** Keep the outgoing picture underneath and fade the new one in over it. */
+  function crossfade() {
+    if (reduceMotion) return;
+    const top = $("cv0"), under = $("cu0"); if (!under) return;
+    if (under.width !== top.width) { under.width = under.height = top.width; }
+    under.getContext("2d").drawImage(top, 0, 0);
+    top.classList.remove("fade"); void top.offsetWidth; top.classList.add("fade");
+  }
+  function openSwipe() {
+    if (reduceMotion) { st.split = 0.5; return; }
+    const t0 = performance.now(), from = 0.1;
+    const tick = (t) => { if (st.mode !== "swipe") return; const k = Math.min(1, (t - t0) / 650), e = 1 - Math.pow(1 - k, 3); st.split = from + (0.5 - from) * e; draw(); if (k < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
   }
 
   function setPlaying(on) {
@@ -528,7 +576,7 @@
   function restartTimer() {
     clearInterval(timer); timer = null;
     if (!st.playing || document.hidden) return;
-    if (st.mode === "blink") timer = setInterval(() => { st.phase ^= 1; draw(); }, clamp(1700 - 15 * st.speed, 180, 1700));
+    if (st.mode === "blink") timer = setInterval(() => { crossfade(); st.phase ^= 1; draw(); }, clamp(1700 - 15 * st.speed, 180, 1700));
     else if (st.mode === "time") timer = setInterval(stepTime, 1000 / (1 + 0.09 * st.speed));
   }
   function stepTime() {
@@ -772,18 +820,18 @@
     const panes = st.mode === "side" ? [0, 1] : [0], S = 640, pad = 12, capH = 64;
     const out = document.createElement("canvas"); out.width = panes.length * S + (panes.length + 1) * pad; out.height = S + capH + 2 * pad;
     const ctx = out.getContext("2d");
-    ctx.fillStyle = "#0a0d16"; ctx.fillRect(0, 0, out.width, out.height);
+    ctx.fillStyle = "#050506"; ctx.fillRect(0, 0, out.width, out.height);
     ctx.imageSmoothingEnabled = st.smooth;
     panes.forEach((pn, k) => {
       const x = pad + k * (S + pad);
       ctx.drawImage($("cv" + pn), x, pad, S, S);
-      ctx.fillStyle = "#fff"; ctx.font = "600 17px system-ui, sans-serif"; ctx.shadowColor = "#000"; ctx.shadowBlur = 6;
+      ctx.fillStyle = "#fff"; ctx.font = "500 15px 'IBM Plex Mono', monospace"; ctx.shadowColor = "#000"; ctx.shadowBlur = 6;
       ctx.fillText($("cap" + pn).textContent.replace(/^([AB]|B − A|\d+ \/ \d+)/, "$1  "), x + 10, pad + 26);
       ctx.shadowBlur = 0;
     });
-    ctx.fillStyle = "#e9edf7"; ctx.font = "600 16px system-ui, sans-serif";
+    ctx.fillStyle = "#efe9dd"; ctx.font = "500 14px 'IBM Plex Mono', monospace";
     ctx.fillText(`${st.target.name || "Sky position"} — RA ${st.target.ra.toFixed(4)}°, Dec ${st.target.dec >= 0 ? "+" : ""}${st.target.dec.toFixed(4)}°, field ${(st.size * 60).toFixed(0)}′, north up`, pad, S + pad + 26);
-    ctx.fillStyle = "#98a4be"; ctx.font = "14px system-ui, sans-serif";
+    ctx.fillStyle = "#aaa294"; ctx.font = "12px 'IBM Plex Mono', monospace";
     ctx.fillText("NASA SPHEREx Level-2 image(s) via NASA/IPAC IRSA · made with Blink X", pad, S + pad + 48);
     out.toBlob((blob) => {
       if (!blob) return;
@@ -888,6 +936,8 @@
       }
     });
     document.addEventListener("visibilitychange", restartTimer);
+    let rz = null;
+    window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { schedule(); if (BX.renderDoodleLayer) BX.renderDoodleLayer(false); }, 120); });
   }
 
   async function boot() {
@@ -925,7 +975,7 @@
 
   Object.assign(BX, {
     $, esc, api, getJson, toast, setStatus, fmtDate, fmtSexa, fmtGap, fmtWl, monthYear, skyToPix, pixToSky, byId, schedule, invalidate,
-    setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive,
+    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive,
   });
   boot();
 })();

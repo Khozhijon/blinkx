@@ -181,7 +181,14 @@ def main() -> None:
         path.write_text(json.dumps(bundle, separators=(",", ":"), allow_nan=False))
         f0, f1 = bundle["frames"][0], bundle["frames"][-1]
         print(f"{ex['slug']:24s} {len(bundle['frames']):3d} frames  {f0['date_obs'][:10]} → {f1['date_obs'][:10]}  {path.stat().st_size/1024:.0f} kB")
-    index = [{"slug": e["slug"], "title": e["title"], "blurb": e["blurb"], "kind": e.get("kind", ""), "simulated": bool(e.get("simulated"))} for e in defs if (OUT / f"{e['slug']}.json").exists()]
+    index = []
+    for e in defs:
+        f = OUT / f"{e['slug']}.json"
+        if not f.exists():
+            continue
+        t = json.loads(f.read_text())["target"]
+        index.append({"slug": e["slug"], "title": e["title"], "blurb": e["blurb"], "kind": e.get("kind", ""), "simulated": bool(e.get("simulated")),
+                      "ra": t["ra"], "dec": t["dec"], "label": e.get("object_label") or e["title"]})
     (OUT / "index.json").write_text(json.dumps(index, indent=1))
     print("index:", [e["slug"] for e in index])
 

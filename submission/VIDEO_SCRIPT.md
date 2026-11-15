@@ -1,30 +1,34 @@
 # 30-second demo video — script
 
-Screen recording of the live site with voice-over. Record at 1080p, browser zoom 110–125 % so the
-picture fills the frame. Total spoken text: about 75 words (a calm pace for 30 s).
+Screen recording of the live site with voice-over. Record at 1080p. Total spoken text: about 80
+words (a calm pace for 30 s).
 
 | Time | On screen | Voice-over |
 |---|---|---|
-| 0:00–0:04 | Title card or the page header: **Blink X — watch the SPHEREx sky change**. The first example is already blinking underneath. | “NASA's SPHEREx telescope photographs the whole sky, over and over. So what changed?” |
-| 0:04–0:11 | Example **Interstellar comet 3I/ATLAS**, Blink mode. The fuzzy comet jumps left ↔ right while the stars stay still. Click **Time-lapse**: it crosses the field in three steps. | “This is Blink X. These are real SPHEREx pictures, three hours apart. The stars stay put. The interstellar comet 3I/ATLAS does not.” |
-| 0:11–0:17 | Click example **Spot the asteroid**. Let it blink for two seconds, then tick **Label known asteroids & comets**: a green ring names (16) Psyche. | “Blinking is how Pluto was found in 1930. Can you spot the asteroid? A catalogue check tells you if it is already known.” |
-| 0:17–0:23 | Click example **Barnard's Star**, then the **Difference** tab: the orange/blue pair in the middle, everything else black. | “Subtract two dates and only the change is left. Orange is new, blue is gone: a nearby star, thirteen months apart.” |
-| 0:23–0:28 | Type **M51** (or any name) in the search box, press **Look**; the strip of dated thumbnails fills in. Drag the Brightness slider. | “Type any star, galaxy or coordinates. Every date comes straight from NASA's image files.” |
-| 0:28–0:30 | End card: **Blink X** · the public URL · “Team KhoFra — NASA Space Apps 2026” | “Blink X. See what moved.” |
+| 0:00–0:05 | The landing page: the SPHEREx Milky Way fills the screen under **“The sky moves. Catch it.”** Drag the **Wavelength** slider slowly so the whole sky changes. | “This is the whole sky as NASA's SPHEREx telescope sees it, in one hundred and two infrared colours. It photographs all of it again every six months. So what changed?” |
+| 0:05–0:11 | Press **Start hunting**. The comet 3I/ATLAS field is blinking; its doodle draws itself in. Press **T** (time-lapse): the comet crosses the grid. | “Blink X flips between real pictures of one patch of sky. The stars stay put. The interstellar comet 3I/ATLAS does not.” |
+| 0:11–0:17 | Click the doodle on the picture: the **Object Card** opens (“Breezy Feather”, known: 3I/ATLAS, 175″ an hour). Close it. | “The app finds the change itself, measures it and draws it as a Sky Doodle. Then it checks the catalogues: this one is known.” |
+| 0:17–0:23 | Target **All five doodles (simulated)**: zigzag, arrow, spark, comet tail and pulse on one field. Then **Barnard's Star** → **Difference** (magenta/green). | “Five shapes, one for each kind of change. A zigzag would be a distant new planet. This field is simulated, and says so. Barnard's Star is real: thirteen months apart.” |
+| 0:23–0:28 | Click **Copy Sky Code**, then type **M51** in the search box and press **Look**. | “One Sky Code shares any view. And you can hunt anywhere in the sky.” |
+| 0:28–0:30 | Back to the landing headline, with the URL on screen. | “Blink X. The sky moves. Catch it.” |
 
 ## Recording tips
 
-- Load each example once before recording so nothing is fetched on camera.
-- Do the live search (M51) once beforehand too: the second time it comes from the cache and is
-  instant. If the archive is slow on the day, cut that shot and hold the Difference view longer.
+- Open the page a few minutes early and run the M51 search once, so the free server is awake and
+  the search is cached. If NASA's archive is slow on the day, cut that shot and hold the Sky Code
+  shot a little longer.
+- The landing map needs a second or two to draw. Start recording once the Milky Way is visible.
+- Keyboard shortcuts make the recording smoother: `B` blink, `S` swipe, `D` difference, `T`
+  time-lapse, space to pause.
 - On a Mac: `Cmd+Shift+5` → Record Selected Portion. Hide the bookmarks bar.
 - No music is needed. If you add any, use a track you have the rights to.
 
 ## Shot list for a no-voice version (captions only)
 
-1. “Real NASA SPHEREx images. Same patch of sky. Three hours apart.” (comet blink)
-2. “Stars stay. Movers jump.” (time-lapse)
-3. “One of these dots is an asteroid.” (Psyche blink → label)
-4. “B minus A: orange is new, blue is gone.” (Barnard's Star difference)
-5. “Search anywhere in the sky.” (live search)
-6. “Blink X — see what moved.” (URL)
+1. “The whole infrared sky. Real NASA SPHEREx data.” (landing, wavelength slider)
+2. “Same patch of sky, three hours apart.” (comet blink → time-lapse)
+3. “Found automatically. Checked against catalogues.” (Object Card)
+4. “Five doodles for five kinds of change.” (simulated field, labelled as simulated)
+5. “Magenta is new. Green is gone.” (Barnard's Star difference)
+6. “Share any view with one Sky Code.” (copy Sky Code)
+7. “Blink X — the sky moves. Catch it.” (URL)

@@ -17,11 +17,11 @@
 
   // Okabe–Ito colours: distinguishable with the common kinds of colour blindness.
   const TYPES = {
-    zigzag: { label: "Zigzag", color: "#E8702A", what: "A very distant world", why: "SPHEREx sees each patch of sky from opposite sides of Earth's orbit, six months apart. Something far beyond Neptune seems to jump back and forth while it slowly drifts. A new one would be a Planet X candidate." },
+    zigzag: { label: "Zigzag", color: "#F0E442", what: "A very distant world", why: "SPHEREx sees each patch of sky from opposite sides of Earth's orbit, six months apart. Something far beyond Neptune seems to jump back and forth while it slowly drifts. A new one would be a Planet X candidate." },
     arrow: { label: "Arrow", color: "#56B4E9", what: "A nearby star or brown dwarf", why: "It is always there, but slides steadily in one direction from visit to visit. The closest stars do this." },
-    spark: { label: "Spark", color: "#F0E442", what: "An asteroid passing through", why: "Seen during one visit only, crossing the stars within hours, then gone." },
+    spark: { label: "Spark", color: "#E69F00", what: "An asteroid passing through", why: "Seen during one visit only, crossing the stars within hours, then gone." },
     tail: { label: "Comet tail", color: "#2FBF91", what: "A comet", why: "Like a spark, but fuzzy: a cloud of gas and dust, often with a tail." },
-    pulse: { label: "Pulse", color: "#DC8FC0", what: "A star that changes brightness", why: "It stays in place but gets brighter or dimmer, appears or fades." },
+    pulse: { label: "Pulse", color: "#CC79A7", what: "A star that changes brightness", why: "It stays in place but gets brighter or dimmer, appears or fades." },
   };
   BX.TYPES = TYPES;
 
@@ -92,37 +92,47 @@
   /* ------------------------------------------------------------------ on the picture */
   const pxOf = (p) => { const [i, j] = BX.skyToPix(p.ra, p.dec); return [i + 0.5, j + 0.5]; };
 
-  BX.hooks.overlay = (pane, f, u, n) => {
-    if (!st.showDoodles || !st.doodles.length) return "";
+  /** The doodles as SVG, in picture coordinates. With `animate` they draw themselves in. */
+  function doodleSvg(u, n, animate) {
+    if (!st.doodles.length) return "";
     let s = "";
-    for (const d of st.doodles) {
-      if (BX.doodleVisible && !BX.doodleVisible(d)) continue;
-      const col = (TYPES[d.type] || TYPES.spark).color, picked = st.pickedDoodle === d.id, sw = (picked ? 1.5 : 0.9) * u, pts = d.points.map(pxOf);
-      const inside = pts.some(([x, y]) => x >= 0 && y >= 0 && x <= n && y <= n); if (!inside) continue;
+    st.doodles.forEach((d, idx) => {
+      if (BX.doodleVisible && !BX.doodleVisible(d)) return;
+      const col = (TYPES[d.type] || TYPES.spark).color, picked = st.pickedDoodle === d.id, sw = (picked ? 0.6 : 0.36) * u, pts = d.points.map(pxOf);
+      if (!pts.some(([x, y]) => x >= 0 && y >= 0 && x <= n && y <= n)) return;
+      const t0 = idx * 0.18, an = (cls, delay) => animate ? ` class="${cls}" style="--d:${(t0 + delay).toFixed(2)}s"` : "";
       const [x0, y0] = pts[0], [x1, y1] = pts[pts.length - 1];
+      let g = "";
       if (pts.length >= 2 && Math.hypot(x1 - x0, y1 - y0) > 0.5) {
-        s += `<polyline points="${pts.map((p) => p.map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round" opacity=".9" ${d.type === "zigzag" ? "" : 'stroke-dasharray="' + 2.2 * u + " " + 1.8 * u + '"'}/>`;
         let [ux, uy] = [x1 - pts[pts.length - 2][0], y1 - pts[pts.length - 2][1]]; const L = Math.hypot(ux, uy) || 1; ux /= L; uy /= L;
-        let tx = x1, ty = y1;
-        if (Math.hypot(x1 - x0, y1 - y0) < 12 * u) {             // a tiny shift: lengthen the arrow so the direction is readable
-          tx = x1 + ux * 12 * u; ty = y1 + uy * 12 * u;
-          s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${tx.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="${col}" stroke-width="${sw}" opacity=".9"/>`;
-        }
-        s += head(tx, ty, ux, uy, 4 * u, col, sw);
-        for (const [x, y] of pts) s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(pts.length > 6 ? 1.1 : 3.2) * u}" fill="${pts.length > 6 ? col : "none"}" stroke="${col}" stroke-width="${sw * 0.8}"/>`;
+        let tx = x1, ty = y1; const line = pts.map((q) => q.map((v) => v.toFixed(1)).join(","));
+        if (Math.hypot(x1 - x0, y1 - y0) < 9 * u) { tx = x1 + ux * 9 * u; ty = y1 + uy * 9 * u; line.push(`${tx.toFixed(1)},${ty.toFixed(1)}`); }   // a tiny shift: lengthen so the direction is readable
+        g += `<polyline points="${line.join(" ")}" pathLength="1" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"${an("draw", 0)}/>`;
+        g += `<g${an("pop", 1.0)}>${head(tx, ty, ux, uy, 2.6 * u, col, sw)}</g>`;
+        const few = pts.length <= 6;
+        pts.forEach(([x, y], k) => { g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(few ? 2.6 : 0.8) * u}" fill="${few ? "none" : col}" stroke="${col}" stroke-width="${sw * 0.9}"${an("pop", 0.15 + (0.8 * k) / Math.max(1, pts.length - 1))}/>`; });
       } else {
-        for (const r of d.type === "pulse" ? [4.5, 7.5] : [5]) s += `<circle cx="${x0.toFixed(1)}" cy="${y0.toFixed(1)}" r="${r * u}" fill="none" stroke="${col}" stroke-width="${sw}" ${d.type === "pulse" ? "" : 'stroke-dasharray="' + 2 * u + " " + 1.5 * u + '"'}/>`;
+        (d.type === "pulse" ? [3, 5.2, 7.4] : [3.4]).forEach((r, k) => { g += `<circle cx="${x0.toFixed(1)}" cy="${y0.toFixed(1)}" r="${r * u}" pathLength="1" fill="none" stroke="${col}" stroke-width="${sw}" opacity="${1 - k * 0.28}"${an("draw", k * 0.22)}/>`; });
       }
-      const lx = clamp(x0 + 5 * u, 2 * u, n - 26 * u), ly = clamp(y0 - 5.5 * u, 6 * u, n - 3 * u);
-      s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="${col}" style="font-size:${4.2 * u}px">${esc(d.id)}</text>`;
-    }
+      const lx = clamp(x0 + 3.6 * u, 2 * u, n - 16 * u), ly = clamp(y0 - 3.6 * u, 8 * u, n - 6 * u);
+      g += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="${col}" style="font-size:${2.3 * u}px;--d:${(t0 + 0.5).toFixed(2)}s"${animate ? ' class="pop"' : ""}>${esc(d.id)}</text>`;
+      s += `<g data-id="${esc(d.id)}">${g}</g>`;
+    });
     return s;
-  };
+  }
+  BX.doodleSvg = doodleSvg;
+
+  /** Own layer above the picture, redrawn only when the doodles change, so the draw-in plays once. */
+  function renderDoodleLayer(animate) {
+    const n = st.n, u = BX.unit(0), html = st.showDoodles ? doodleSvg(u, n, animate) : "";
+    for (const id of ["dl0", "dl1"]) { const el = $(id); if (!el) continue; el.setAttribute("viewBox", `0 0 ${n} ${n}`); el.innerHTML = html; }
+  }
+  BX.renderDoodleLayer = renderDoodleLayer;
 
   /** A click on the picture opens the card of the doodle under it, if any. */
   BX.hooks.paneClick = (pane, x, y) => {
     if (!st.showDoodles || !st.doodles.length) return;
-    const u = st.n / 128; let best = null, bd = 9 * u;
+    const u = BX.unit(pane); let best = null, bd = 5 * u;
     for (const d of st.doodles) {
       const pts = d.points.map(pxOf);
       for (let k = 0; k < pts.length; k++) {
@@ -167,10 +177,11 @@
           : `Lined up with each file's sky coordinates (WCS) and checked on ${Math.min(...checked.map((a) => a.stars))}–${Math.max(...checked.map((a) => a.stars))} stars per exposure: largest leftover shift ${worst.toFixed(1)}″ (a SPHEREx pixel is 6.2″).`;
     }
     if (BX.hooks.boardExtra) BX.hooks.boardExtra();
+    renderDoodleLayer(false);
   }
   BX.renderBoard = renderBoard;
   BX.hooks.reset = () => renderBoard();
-  BX.hooks.doodles = () => { renderBoard(); BX.schedule(); };
+  BX.hooks.doodles = () => { renderBoard(); renderDoodleLayer(true); };
 
   /** Live searches: ask the server to analyse the exposures that are on screen. */
   BX.hooks.framesReady = async () => {
@@ -185,14 +196,14 @@
       if (token !== st.token) return;
       st.doodles = res.doodles || []; st.align = res.align || {}; st.checked = res.checked || null; st.doodleState = "done";
     } catch (e) { if (token !== st.token) return; st.doodleState = "error"; st.doodleError = e.message; }
-    renderBoard(); BX.invalidate();
+    renderBoard(); renderDoodleLayer(true); BX.invalidate();
   };
 
   /* ------------------------------------------------------------------ Object Card */
   const fmtNum = (v, n = 1) => v == null ? "?" : Number(v).toFixed(n);
   function openCard(id) {
     const d = st.doodles.find((x) => x.id === id); if (!d) return;
-    st.pickedDoodle = id; BX.schedule();
+    st.pickedDoodle = id;
     const T = TYPES[d.type] || TYPES.spark, m = d.motion || {}, b = d.brightness || {}, first = d.points[0], last = d.points[d.points.length - 1];
     const rows = [];
     if (m.dist_arcsec != null) rows.push(["Moved", `${fmtNum(m.dist_arcsec)}″ = ${fmtNum(m.dist_spherex_px)} SPHEREx pixels, toward the ${m.direction}`]);
@@ -270,9 +281,9 @@
     $("step3").addEventListener("click", () => $("doodlePanel").scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
-  $("showDoodles").addEventListener("change", (e) => { st.showDoodles = e.target.checked; BX.schedule(); });
+  $("showDoodles").addEventListener("change", (e) => { st.showDoodles = e.target.checked; renderDoodleLayer(e.target.checked); });
   $("cardClose").addEventListener("click", closeCard);
   $("card").addEventListener("click", (e) => { if (e.target === $("card")) closeCard(); });     // click on the backdrop
-  $("card").addEventListener("close", () => { st.pickedDoodle = null; BX.schedule(); renderBoard(); });
+  $("card").addEventListener("close", () => { st.pickedDoodle = null; renderBoard(); });
   renderLegend(); wireTips(); wireIntro(); renderBoard();
 })();

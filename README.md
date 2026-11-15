@@ -30,6 +30,34 @@ infrared survey, in a browser, on a phone.
 | Examples | Preset targets saved as static files, so the demo still works if the archive is slow or down. |
 | Extras | Labels for known asteroids and comets in the field at that moment (IMCCE SkyBoT); mark suspected movers and copy their coordinates; every view has a shareable link. |
 
+## Design: "Infrared Observatory"
+
+The page is meant to feel like a precision instrument crossed with an astronomy poster, and the
+real sky is the hero.
+
+- **Landing**: a full-screen, zoomable map of the whole sky drawn by Aladin Lite from the
+  SPHEREx DR1 all-sky cube that IRSA publishes as a HiPS. A slider scrubs through its 102
+  wavelengths; the saved targets are pinned on the real sky; "Hunt the patch in view" starts a
+  search wherever the map is pointing. If the map cannot load, a real SPHEREx exposure from the
+  saved examples is shown instead.
+- **Palette**: true black `#050506`, warm off-white `#EFE9DD`, and one accent, infrared orange
+  `#FF5A1F`. Magenta/green (difference view) and the five doodle colours are data colours only,
+  all colour-blind-safe.
+- **Type**: Instrument Serif for headings (it reads like the title page of an observatory atlas
+  and contrasts sharply with data), IBM Plex Mono for every coordinate, date and label, IBM Plex
+  Sans for body text. All three are free Google Fonts.
+- **Instrument details**: hairlines, sharp corners, a coordinate grid with RA/Dec tick labels and
+  a reticle over every picture, small all-caps labels, timestamps written like a telescope readout.
+- **Motion with a purpose**: a short crossfade on blink, an eased divider when swipe opens,
+  doodles that draw themselves in, a slow drift of the landing sky. All of it is switched off
+  under `prefers-reduced-motion`.
+- **Tokens**: every colour, font and spacing step is a CSS variable at the top of
+  `frontend/style.css`. Icons are Lucide, inlined as an SVG sprite (no icon library is loaded).
+- **Phone**: the picture runs edge to edge, the mode bar scrolls sideways, and the Object Card
+  becomes a full-screen sheet.
+
+Before/after screenshots are in `submission/screens/`.
+
 ## Sky Doodles: automatic change detection
 
 Blink X does not only show the pictures; it looks for the changes itself (`backend/detect.py`,
@@ -197,7 +225,8 @@ with no backend at all, and live search wakes up in the background.
 ```
 backend/     FastAPI app: spherex.py (archive access + image maths), detect.py (change detection),
              catalogs.py (known-object checks), simulate.py (the simulated demo), resolver.py, skybot.py, cache.py, main.py
-frontend/    index.html, style.css, app.js (viewer), doodles.js (Sky Doodles), config.js, examples/ (saved bundles)
+frontend/    index.html, style.css (design tokens + components), app.js (viewer), doodles.js (Sky Doodles),
+             tools.js (Sky Code, exports, scientist view), landing.js (the sky map), config.js, examples/
 scripts/     build_examples.py, build_seed.py, find_movers.py (finds asteroids/comets that SPHEREx imaged)
 seed/        saved archive search results for well-known targets (fallback when IRSA is down)
 spike/       the first data experiments and validation scripts
@@ -210,6 +239,7 @@ submission/  project summary, resources list, AI-use note, video script, slide o
 - **NASA SPHEREx** Level-2 spectral images, Data Release 1 and Quick Release 3 — NASA/IPAC
   Infrared Science Archive (IRSA): <https://irsa.ipac.caltech.edu/Missions/spherex.html>
 - IRSA Simple Image Access v2: <https://irsa.ipac.caltech.edu/SIA>
+- SPHEREx DR1 all-sky data cube as a HiPS map (the landing view): <https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube>
 - IRSA SPHEREx archive documentation and cutout tutorial:
   <https://caltech-ipac.github.io/spherex-archive-documentation/> ·
   <https://caltech-ipac.github.io/irsa-tutorials/spherex-cutouts>
@@ -219,6 +249,8 @@ submission/  project summary, resources list, AI-use note, video script, slide o
 - JPL Horizons (used offline to find which exposures caught the example asteroids/comets):
   <https://ssd.jpl.nasa.gov/horizons/>
 - SIMBAD (CDS; CfA mirror) for proper motions and variable-star types: <https://simbad.cds.unistra.fr/>
+- Aladin Lite v3 (CDS, free sky viewer, loaded from jsDelivr): <https://aladin.cds.unistra.fr/AladinLite/>
+- Fonts: Instrument Serif, IBM Plex Sans, IBM Plex Mono (Google Fonts). Icons: Lucide.
 - Software: Python, FastAPI, Astropy, photutils, NumPy, SciPy, httpx, Pillow.
 
 ## Credits and licence
