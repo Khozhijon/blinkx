@@ -172,7 +172,7 @@ def api_doodles(ra: float = RA, dec: float = DEC, size: float = 0.1, ids: str = 
     wanted = [i for i in ids.split(",") if i][:48]
     if len(wanted) < 2:
         raise HTTPException(400, "Change detection needs at least two exposures.")
-    ck = "doodles/" + f"{ra}_{dec}_{size}_" + hashlib.sha1(",".join(sorted(wanted)).encode()).hexdigest()[:16]
+    ck = "doodles2/" + f"{ra}_{dec}_{size}_" + hashlib.sha1(",".join(sorted(wanted)).encode()).hexdigest()[:16]
     hit = sx.cache.get_json(ck, max_age=6 * 3600)
     if hit is not None:
         return hit

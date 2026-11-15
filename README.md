@@ -87,10 +87,15 @@ labelled **known**. No match is labelled **candidate**, with the reasons it migh
 Blink X never claims a discovery.
 
 Checked on real data: on the saved fields the detector finds, on its own, comet 3I/ATLAS at
-175″/h, Vesta at 37.1″/h, Psyche at 36.1″/h and Barnard's Star at 10.2″/yr (catalogue: 10.39″/yr),
+175″/h, Vesta at 37.1″/h, Psyche at 36.1″/h and Barnard's Star at 10.0″/yr (catalogue: 10.39″/yr),
 one doodle per field and nothing else. Nobody has found a zigzag in SPHEREx data, so that shape is
 shown on a **simulated** field, clearly labelled as simulated; the same detection code runs on it,
 and the tests check that it recovers the simulated planet's distance (`tests/test_detect.py`).
+
+A zigzag has to be physically possible before it is drawn: the size of the jump gives a distance,
+and at that distance Kepler's third law allows only a small drift from one year to the next. Three
+blips that merely line up fail that test. A zigzag seen in only three visits is still worded as a
+weak candidate.
 
 Views: Blink, **Swipe** (drag a divider), Side by side, **Difference** (magenta = new or brighter,
 green = gone or dimmer), Time-lapse. Shortcuts: `B` `S` `D` `T`, `←`/`→` change the later epoch,

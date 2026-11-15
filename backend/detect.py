@@ -96,7 +96,7 @@ class Frame:
 
 
 def _photometry(img: np.ndarray, pos: np.ndarray, pix: float):
-    """Centroid, small- and large-aperture flux (local sky removed) at the given positions."""
+    """Centroid, small- and large-aperture flux (local sky removed) and the local sky level at the given positions."""
     from photutils.aperture import ApertureStats, CircularAnnulus, CircularAperture
 
     s = NATIVE / pix
@@ -111,7 +111,7 @@ def _photometry(img: np.ndarray, pos: np.ndarray, pix: float):
         good = np.isfinite(cx) & np.isfinite(cy) & (np.hypot(cx - pos[:, 0], cy - pos[:, 1]) < 1.5 * s)
         cx, cy = np.where(good, cx, pos[:, 0]), np.where(good, cy, pos[:, 1])
         wide = np.asarray(ApertureStats(data, CircularAperture(np.c_[cx, cy], 3.0 * s), local_bkg=bg, mask=mask).sum, float)
-    return cx, cy, np.nan_to_num(flux), np.nan_to_num(wide)
+    return cx, cy, np.nan_to_num(flux), np.nan_to_num(wide), bg
 
 
 def find_sources(fr: Frame) -> None:
@@ -130,8 +130,11 @@ def find_sources(fr: Frame) -> None:
     order = np.argsort(-np.asarray(tbl["peak_value"], float))[:MAX_SOURCES]
     pos = np.c_[np.asarray(tbl["x_peak"], float)[order], np.asarray(tbl["y_peak"], float)[order]]
     peak = np.asarray(tbl["peak_value"], float)[order]
-    cx, cy, flux, wide = _photometry(img, pos, fr.pix)
-    keep = flux > 0
+    cx, cy, flux, wide, bg = _photometry(img, pos, fr.pix)
+    # What counts is how far a source stands above its own surroundings. On the diffuse light of a
+    # galaxy or nebula every bump is "bright", and such bumps come and go from frame to frame.
+    peak = peak - np.maximum(bg, 0.0)
+    keep = (flux > 0) & (peak >= THRESH)
     # A very bright object throws a halo, spikes and ghosts around itself. Those travel with it and
     # would look like extra movers, so faint detections inside the glare of a bright one are dropped.
     for i in np.where(peak >= 300.0)[0]:
@@ -671,38 +674,66 @@ def _mover_doodle(dets, track, sight, frames, visit, pix, conc_star) -> dict:
     return d
 
 
+def _zigzag_plausible(chain, pix) -> bool:
+    """A real parallax zigzag closes on itself. The size of the jump gives the distance, and at that
+    distance Kepler's third law allows only a small net drift from one year to the next."""
+    jumps = [math.hypot(b["x"] - a["x"], b["y"] - a["y"]) * pix for a, b in zip(chain[:-1], chain[1:])]
+    jump = float(np.median(jumps))
+    if jump <= 0:
+        return False
+    dist_au = 2.0 / math.radians(jump / 3600.0)
+    allowed = 2.0 * 1296000.0 / dist_au ** 1.5                      # twice the circular-orbit rate, arcsec a year
+    for a, b in zip(chain[:-2], chain[2:]):                         # same side of Earth's orbit, about a year apart
+        years = max(((b["t0"] + b["t1"]) - (a["t0"] + a["t1"])) / 2.0 / 365.25, 0.25)
+        if math.hypot(b["x"] - a["x"], b["y"] - a["y"]) * pix > allowed * years + 2.0 * NATIVE:
+            return False
+    return True
+
+
+def _zigzag_closure(chain, pix) -> float:
+    return sum(math.hypot(b["x"] - a["x"], b["y"] - a["y"]) for a, b in zip(chain[:-2], chain[2:])) * pix
+
+
 def _find_zigzag(left, dets, visit, pix):
-    """Sightings in three or more visits whose jumps alternate direction (parallax)."""
+    """Sightings in three or more consecutive visits whose jumps alternate direction (parallax) and
+    whose net drift is physically possible at the distance the jump implies."""
     by_visit: dict[int, list] = {}
     for c in left:
         by_visit.setdefault(int(visit[dets[c["members"][0]].f]), []).append(c)
     vs = sorted(by_visit)
     if len(vs) < 3:
         return None
-    best, best_len = None, 2
-    for a in by_visit[vs[0]]:
-        chain = [a]
-        for v in vs[1:]:
-            prev = chain[-1]
-            cands = [c for c in by_visit[v] if 0.4 < c["flux"] / max(prev["flux"], 1e-9) < 2.5]
-            if len(chain) >= 2:
-                d1 = (chain[-1]["x"] - chain[-2]["x"], chain[-1]["y"] - chain[-2]["y"])
+    best, best_key = None, None
 
-                def turn(c, d1=d1, prev=prev):
-                    d2 = (c["x"] - prev["x"], c["y"] - prev["y"])
-                    n1, n2 = math.hypot(*d1), math.hypot(*d2)
-                    return (d1[0] * d2[0] + d1[1] * d2[1]) / (n1 * n2) if n1 > 0 and n2 > 0 else 1.0
-
-                cands = [c for c in cands if turn(c) < -0.6 and 0.4 < math.hypot(c["x"] - prev["x"], c["y"] - prev["y"]) / max(math.hypot(*d1), 1e-9) < 2.5]
-                cands.sort(key=turn)
+    def extend(chain, k):
+        nonlocal best, best_key
+        if len(chain) >= 3 and _zigzag_plausible(chain, pix):
+            key = (len(chain), -_zigzag_closure(chain, pix))
+            if best_key is None or key > best_key:
+                best, best_key = list(chain), key
+        if k >= len(vs) or vs[k] != vs[k - 1] + 1:
+            return
+        prev = chain[-1]
+        for c in by_visit[vs[k]]:
+            if not 0.4 < c["flux"] / max(prev["flux"], 1e-9) < 2.5:
+                continue
+            step = math.hypot(c["x"] - prev["x"], c["y"] - prev["y"])
+            if len(chain) == 1:
+                if step * pix <= 3 * NATIVE:
+                    continue
             else:
-                cands = [c for c in cands if math.hypot(c["x"] - prev["x"], c["y"] - prev["y"]) * pix > 3 * NATIVE]
-                cands.sort(key=lambda c: abs(math.log(c["flux"] / max(prev["flux"], 1e-9))))
-            if not cands:
-                break
-            chain.append(cands[0])
-        if len(chain) > best_len:
-            best, best_len = chain, len(chain)
+                d1 = (prev["x"] - chain[-2]["x"], prev["y"] - chain[-2]["y"])
+                n1 = math.hypot(*d1)
+                if n1 <= 0 or step <= 0:
+                    continue
+                turn = (d1[0] * (c["x"] - prev["x"]) + d1[1] * (c["y"] - prev["y"])) / (n1 * step)
+                if turn > -0.8 or not 0.6 < step / n1 < 1.67:
+                    continue
+            extend(chain + [c], k + 1)
+
+    for s0 in range(len(vs) - 2):
+        for a in by_visit[vs[s0]]:
+            extend([a], s0 + 1)
     return best
 
 
@@ -807,9 +838,10 @@ def explain(d: dict) -> None:
                 f"({m['dist_spherex_px']:.1f} SPHEREx pixels) in {_span(m['days'])}, about {m['rate_arcsec_per_year']:.1f} arcseconds a year. "
                 "Steady drift like this is how a nearby star or brown dwarf looks from Earth.")
     elif kind == "zigzag":
-        text = (f"It jumps about {m['jump_arcsec']:.0f} arcseconds back and forth between visits six months apart. SPHEREx looks at each patch of sky "
-                "from opposite sides of Earth's orbit, so only a body far beyond Neptune does that. "
-                + (f"The size of the jump puts it roughly {m['distance_au']:.0f} times as far from the Sun as Earth is." if m.get("distance_au") else ""))
+        text = (f"It appears to jump about {m['jump_arcsec']:.0f} arcseconds back and forth between visits six months apart. SPHEREx looks at each "
+                "patch of sky from opposite sides of Earth's orbit, so a body far beyond Neptune would do exactly that. "
+                + (f"If it is real, the size of the jump puts it roughly {m['distance_au']:.0f} times as far from the Sun as Earth is." if m.get("distance_au") else "")
+                + (" Three sightings can also line up by chance, so this is a weak candidate until another visit repeats the pattern." if len(pts) <= 3 else ""))
     else:
         b = d.get("brightness") or {}
         if b.get("change_pct"):

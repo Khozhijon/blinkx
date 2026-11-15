@@ -94,3 +94,17 @@ def test_small_demo_version_still_finds_all_five():
     sim = simulate.planet_x_field(n=192, per_group=2)
     res = detect.detect(detect.frames_from_encoded(sim["frames"], sx.decode_frame), 150.0, 2.0, sim["size_deg"])
     assert sorted(d["type"] for d in res["doodles"]) == ["arrow", "pulse", "spark", "tail", "zigzag"]
+
+
+def test_zigzag_must_close_like_a_real_orbit():
+    """Three blips that line up by chance are not a planet: the yearly drift has to fit the distance the jump implies."""
+    pix = 6.15
+
+    def chain(jump_arcsec, drift_arcsec):
+        a = {"x": 100.0, "y": 100.0, "t0": 0.0, "t1": 0.1}
+        b = {"x": 100.0 + jump_arcsec / pix, "y": 100.0, "t0": 183.0, "t1": 183.1}
+        c = {"x": 100.0, "y": 100.0 + drift_arcsec / pix, "t0": 366.0, "t1": 366.1}
+        return [a, b, c]
+
+    assert detect._zigzag_plausible(chain(825.0, 118.0), pix)       # 500 au: drifts about 116" a year
+    assert not detect._zigzag_plausible(chain(245.0, 84.0), pix)    # 1700 au could drift only about 19" a year

@@ -37,7 +37,7 @@
 - Honest display: sky glow removed, flagged pixels repaired from neighbours and shown on request,
   wavelength of every frame stated.
 - Detection measured on real data: comet 3I/ATLAS 175″ per hour, Vesta 37″ per hour, Barnard's
-  Star about 10.2″ per year (catalogue: 10.4). Never called a discovery.
+  Star about 10.0″ per year (catalogue: 10.4). Never called a discovery.
 - Known objects labelled (JPL Horizons, IMCCE SkyBoT, SIMBAD), so an unlabelled mover stands out.
 - Robust for a live demo: the examples are saved real data, so they open even if the archive is busy.
 - Small diagram: Browser ⇄ FastAPI ⇄ IRSA search / AWS files / CDS names / SkyBoT.
