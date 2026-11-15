@@ -14,9 +14,10 @@ Claude Code.
 - Drafted the README, the project summary, the project-page texts, the video script, and built
   the seven-slide deck (`frontend/slides/`). Every picture in the deck is a real screenshot of the
   tool showing NASA data.
-- In the final stage it also proposed additions, which the team accepted: adding exposures
-  together, the search on the added-up pictures, the Gaia overlay, the record of SPHEREx
-  pointings, the full spectrum on the fly and the embed mode.
+- In the final stage, under the team's general instruction to strengthen the entry, it also
+  proposed and built additions: adding exposures together, the search on the added-up pictures,
+  the Gaia overlay, the record of SPHEREx pointings, the full spectrum on the fly and the embed
+  mode.
 
 **What the AI did not do**
 

@@ -30,6 +30,11 @@ Everything is written out field by field in **`submission/PROJECT_PAGE.md`**: op
 - If NASA's archive search (IRSA) is slow or down, live search still works: it uses saved lists for
   well-known targets and, for anywhere else, its own record of where SPHEREx pointed. The examples
   are not affected.
+- A live "full spectrum" of a new spot takes about a minute on the free server (it reads about a
+  hundred exposures). The five test objects have theirs saved, so those open at once. In a demo,
+  show a saved one (Epsilon Indi B is the most striking).
+- Measured on the public site on 15 Nov 2026: the challenge's printed coordinates for WISE 0855
+  load in about 35 s, and one more click finds the brown dwarf in about 35 s.
 - Render will show "Upgrade" offers in its dashboard. The service is on the Free plan; nothing in
   this project needs a paid plan.
 

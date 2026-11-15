@@ -147,9 +147,10 @@ Code: https://github.com/Khozhijon/blinkx
 Yes. We used Claude (Anthropic), through Claude Code, as an AI coding assistant. Working from our
 written requirements, it wrote the Python backend, the HTML/CSS/JavaScript front end, the tests
 and the scripts, ran data experiments against the IRSA archive, and drafted the documentation,
-these project-page texts and the slide deck. In the final stage it also proposed additions that
-we accepted (adding exposures together, the Gaia overlay, the record of SPHEREx pointings, the
-spectrum on the fly, the embed mode). We chose the challenge and the idea, set the requirements
+these project-page texts and the slide deck. In the final stage, under our general instruction to
+strengthen the entry, it also proposed and built additions (adding exposures together, the Gaia
+overlay, the record of SPHEREx pointings, the spectrum on the fly, the embed mode). We chose the
+challenge and the idea, set the requirements
 and the rules the tool must keep (real data only, never claim a discovery), reviewed the results
 and are responsible for the submission.
 
