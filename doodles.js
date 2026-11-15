@@ -169,12 +169,14 @@
     const miss = $("doodleExpected"), exp = st.doodleState === "done" ? (st.expected || []) : [];
     miss.hidden = !exp.length;
     if (exp.length) {
-      const deep = st.band >= 5 ? "" : " Cool objects show best in the 3.8–5.0 µm bands.";
+      const cool = st.band < 5 && exp.some((e) => /brown dwarf/.test(e.kind));
+      const deep = cool ? ` Cool objects show best at 3.8–5.0 µm: <button type="button" class="linklike" id="tryCool">switch to the 3.8–4.4 µm band with the exposures added up</button>.` : "";
       miss.innerHTML = `<strong>Not found here, but catalogued:</strong> ` + exp.map((e) => `${esc(e.name)}, a ${esc(e.kind)} that ${esc(e.source)} lists as moving ${e.pm_arcsec_per_year.toFixed(2)}″ a year`).join("; ") +
         `. ${exp.length === 1 ? "It" : "They"} may be too faint or too red in this colour band, or there may be too little time between these pictures.${deep} ` +
-        (st.depth === "single" ? `Try <button type="button" class="linklike" id="tryDeep">adding the exposures up per visit</button>` : "Try another colour band") + ` and look near ` +
+        (cool ? "Then" : st.depth === "single" ? `Try <button type="button" class="linklike" id="tryDeep">adding the exposures up per visit</button> and` : "Try another colour band and") + ` look near ` +
         exp.map((e) => `<button type="button" class="linklike" data-ra="${e.ra}" data-dec="${e.dec}" data-name="${esc(e.name)}">${esc(BX.fmtSexa(e.ra, e.dec))}</button>`).join(", ") + ".";
       const t = $("tryDeep"); if (t) t.addEventListener("click", () => BX.setDepth("visit"));
+      const tc = $("tryCool"); if (tc) tc.addEventListener("click", () => { st.depth = "visit"; BX.reload({ band: 5, depth: "visit" }); $("viewer").scrollIntoView({ behavior: "smooth", block: "start" }); });
       for (const b of miss.querySelectorAll("[data-ra]")) b.addEventListener("click", () => { if (BX.addMark) BX.addMark(+b.dataset.ra, +b.dataset.dec); $("stage").scrollIntoView({ behavior: "smooth", block: "center" }); });
     }
     // apparent drifts that an older survey rules out: shown, so nobody wonders what the search looked at and dropped
@@ -190,7 +192,7 @@
         ? "Lined up with the sky coordinates stored in each image file (WCS). Too few stars here for a second check on the star pattern."
         : moved.length
           ? `Lined up with each file's sky coordinates (WCS). ${moved.length} exposure${moved.length === 1 ? " was" : "s were"} off and shifted by up to ${worst.toFixed(1)}″ to match the star pattern.`
-          : `Lined up with each file's sky coordinates (WCS) and checked on ${Math.min(...checked.map((a) => a.stars))}–${Math.max(...checked.map((a) => a.stars))} stars per exposure: largest leftover shift ${worst.toFixed(1)}″ (a SPHEREx pixel is 6.2″).`;
+          : `Lined up with each file's sky coordinates (WCS) and checked on ${((lo, hi) => lo === hi ? lo : `${lo}–${hi}`)(Math.min(...checked.map((a) => a.stars)), Math.max(...checked.map((a) => a.stars)))} stars per exposure: largest leftover shift ${worst.toFixed(1)}″ (a SPHEREx pixel is 6.2″).`;
     }
     if (BX.hooks.boardExtra) BX.hooks.boardExtra();
     renderDoodleLayer(false);
@@ -259,7 +261,7 @@
   /* ------------------------------------------------------------------ light curve: brightness at each visit */
   function lightCurveBlock(d, color) {
     const b = d.brightness; if (!b || !b.curve || b.curve.length < 4) return "";
-    const narrow = window.innerWidth < 720, W = narrow ? 340 : 560, H = narrow ? 176 : 186, L = 46, R = 12, T0 = 22, B = 34;
+    const narrow = window.innerWidth < 720, W = narrow ? 340 : 560, H = narrow ? 190 : 186, L = 46, R = 12, T0 = 22, B = narrow ? 48 : 34;
     const visits = [...new Set(b.curve.map((q) => q[2]))].sort((p, q) => p - q), col = (W - L - R) / visits.length;
     const vals = b.curve.map((q) => q[1]), top = Math.max(1.5, Math.ceil(Math.max(...vals) * 10 + 1) / 10), bot = Math.max(0, Math.min(0.5, Math.floor(Math.min(...vals) * 10 - 1) / 10));
     const Y = (v) => T0 + (1 - (v - bot) / (top - bot)) * (H - T0 - B), f1 = (v) => v.toFixed(1);
@@ -272,7 +274,8 @@
       const level = pts.map((q) => q[1]).sort((p, q) => p - q), mid = level.length % 2 ? level[level.length >> 1] : (level[(level.length >> 1) - 1] + level[level.length >> 1]) / 2;
       for (const q of pts) g += `<circle class="pt dim" cx="${f1(x0 + col * (0.25 + 0.5 * (q[0] - t0) / span))}" cy="${f1(Y(q[1]))}" r="${narrow ? 2.2 : 2.6}"><title>${mjdDate(q[0]).slice(0, 16).replace("T", " ")} UTC · ${q[1].toFixed(2)} × its usual brightness</title></circle>`;
       g += `<line class="line strong" x1="${f1(x0 + col * 0.15)}" x2="${f1(x0 + col * 0.85)}" y1="${f1(Y(mid))}" y2="${f1(Y(mid))}"/>`;
-      g += `<text x="${f1(x0 + col / 2)}" y="${H - B + 15}" text-anchor="middle">${BX.monthYear(mjdDate(t0))}</text><text class="lc-n" x="${f1(x0 + col / 2)}" y="${H - B + 28}" text-anchor="middle">${pts.length} exposures · ${mid.toFixed(2)}×</text>`;
+      g += `<text x="${f1(x0 + col / 2)}" y="${H - B + 15}" text-anchor="middle">${BX.monthYear(mjdDate(t0))}</text><text class="lc-n" x="${f1(x0 + col / 2)}" y="${H - B + 28}" text-anchor="middle">${narrow ? `${mid.toFixed(2)}×` : `${pts.length} exposures · ${mid.toFixed(2)}×`}</text>` +
+        (narrow ? `<text x="${f1(x0 + col / 2)}" y="${H - B + 41}" text-anchor="middle">${pts.length} exposures</text>` : "");
     });
     return `<section class="spectrum lightcurve" style="--c:${color}"><h3>Brightness at each visit</h3>` +
       `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Brightness of this object at ${visits.length} visits">${g}</svg>` +

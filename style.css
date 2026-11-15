@@ -110,6 +110,10 @@ input[type="checkbox"]:checked { background: var(--ir) url("data:image/svg+xml,%
 .display { font: 400 clamp(56px, 8.4vw, 128px)/.92 var(--f-display); letter-spacing: -.02em; margin: var(--s4) 0 var(--s5); }
 .display em { font-style: italic; color: var(--ir); }
 .lede { font-size: clamp(16px, 1.5vw, 19px); line-height: 1.45; color: var(--bone); max-width: 30em; }
+.proof { margin-top: var(--s4); font: 400 12px/1.6 var(--f-mono); letter-spacing: .02em; color: var(--bone-2); max-width: 76em; pointer-events: auto; }
+.proof i { display: inline-block; width: 5px; height: 5px; background: var(--ir); margin: 0 10px 1px 0; }
+.proof-link { background: none; border: 0; padding: 0; font: inherit; color: var(--bone); cursor: pointer; text-decoration: underline; text-decoration-color: var(--ir); text-underline-offset: 3px; pointer-events: auto; }
+.proof-link:hover { color: var(--ir); }
 .cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s5); margin-top: var(--s6); }
 .cta { display: inline-flex; align-items: center; gap: 14px; padding: 18px 22px; background: var(--ir); color: var(--ir-ink); border: 0; cursor: pointer; font: 500 13px/1 var(--f-mono); letter-spacing: .16em; text-transform: uppercase; transition: background .15s, gap .2s var(--ease); }
 .cta:hover { background: var(--bone); gap: 20px; } .cta .ic { width: 18px; height: 18px; stroke-width: 1.8; }

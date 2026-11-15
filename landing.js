@@ -115,6 +115,7 @@ async function start() {
   }
 }
 
+$("proofBtn").addEventListener("click", () => { BX.st.fromCode = null; BX.loadExample("wise-0855"); go("viewer"); });
 $("exploreBtn").addEventListener("click", () => setExplore(!exploring));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && exploring) setExplore(false); });
 $("huntHere").addEventListener("click", () => {

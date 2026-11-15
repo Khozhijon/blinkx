@@ -1110,7 +1110,7 @@
 
   Object.assign(BX, {
     $, esc, api, getJson, toast, setStatus, fmtDate, fmtSexa, fmtGap, fmtWl, monthYear, skyToPix, pixToSky, byId, schedule, invalidate,
-    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive, setDepth, when, addMark, knownFirst,
+    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive, setDepth, when, addMark, knownFirst, reload,
   });
   boot();
 })();

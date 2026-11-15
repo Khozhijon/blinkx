@@ -44,6 +44,7 @@
         <button id="exploreBtn" class="text-btn" type="button" hidden><svg class="ic"><use href="#i-telescope"/></svg><span>Explore the sky map</span></button>
         <button id="huntHere" class="text-btn accent" type="button" hidden><svg class="ic"><use href="#i-locate-fixed"/></svg><span>Hunt the patch in view</span></button>
       </div>
+      <p class="proof"><i></i>Tested on NASA's five challenge objects. It found <button type="button" id="proofBtn" class="proof-link">WISE 0855, the coldest brown dwarf known</button>, by itself: 8.2″ a year (catalogue 8.15).</p>
     </div>
 
     <div class="readout-bar" id="skyReadout">
@@ -310,11 +311,11 @@
         </div>
         <div>
           <h3>Five ways to compare</h3>
-          <p><strong>Blink</strong> flips between an earlier picture (A) and a later one (B). <strong>Side by side</strong> shows both at once. <strong>Swipe</strong> lets you drag a divider between them. <strong>Difference</strong> subtracts A from B: anything new or brighter glows <span class="c-new">magenta</span>, anything gone or dimmer turns <span class="c-gone">green</span>, and everything that stayed the same fades to black. <strong>Time-lapse</strong> plays every exposure in order.</p>
+          <p><strong>Blink</strong> flips between an earlier picture (A) and a later one (B). <strong>Side by side</strong> shows both at once. <strong>Swipe</strong> lets you drag a divider between them. <strong>Difference</strong> subtracts A from B: anything new or brighter glows <span class="c-new">magenta</span>, anything gone or dimmer turns <span class="c-gone">green</span>, and everything that stayed the same fades to black. <strong>Time-lapse</strong> plays every exposure in order. Under “Exposures” you can also <strong>add them together</strong>, per visit or all at once: the noise drops and fainter things appear.</p>
         </div>
         <div>
           <h3>Sky Doodles</h3>
-          <p>Blink X also looks for changes by itself. It finds the stars in every picture, lines them up, and flags anything that moved, changed brightness, appeared or vanished. Each find becomes a doodle: a <strong>spark</strong> for an asteroid, a <strong>comet tail</strong>, an <strong>arrow</strong> for a nearby star, a <strong>pulse</strong> for a star that changes brightness, and a <strong>zigzag</strong> for a very distant world. Known objects are named; the rest are only candidates.</p>
+          <p>Blink X also looks for changes by itself. It finds the stars in every picture, lines them up, and flags anything that moved, changed brightness, appeared or vanished. Each find becomes a doodle: a <strong>spark</strong> for an asteroid, a <strong>comet tail</strong>, an <strong>arrow</strong> for a nearby star, a <strong>pulse</strong> for a star that changes brightness, and a <strong>zigzag</strong> for a very distant world. Slow movers too faint for one exposure are searched for in each visit’s exposures added together: that is how it finds WISE 0855, the coldest brown dwarf known. Known objects are named; the rest are only candidates.</p>
         </div>
         <div>
           <h3>Hunting for Planet X</h3>
@@ -322,7 +323,7 @@
         </div>
         <div>
           <h3>Things that can fool you</h3>
-          <p>Each exposure sees a slightly different infrared colour, so a star can look brighter in one picture than another. Very bright stars leave rings and blocky cores in the difference view. Pixels that NASA’s pipeline flagged as bad (cosmic-ray hits, dead pixels) are filled in from their neighbours — tick “Show repaired pixels” to see which.</p>
+          <p>Each exposure sees a slightly different infrared colour, so a star can look brighter in one picture than another. Very bright stars leave rings and blocky cores in the difference view. Pixels that NASA’s pipeline flagged as bad (cosmic-ray hits, dead pixels) are filled in from their neighbours — tick “Show repaired pixels” to see which. Blink X also doubts itself: a drift that no catalogue names is checked against older surveys (WISE in 2010, Gaia in 2016), and anything they rule out is set aside and listed. Tick “Gaia stars” to lay the European Space Agency’s star catalogue over the picture.</p>
         </div>
       </div>
     </section>
@@ -333,7 +334,8 @@
       <a href="https://irsa.ipac.caltech.edu/Missions/spherex.html" target="_blank" rel="noopener">NASA/IPAC Infrared Science Archive</a>.
       Sky viewer: <a href="https://aladin.cds.unistra.fr/AladinLite/" target="_blank" rel="noopener">Aladin Lite</a> (CDS).
       Names: <a href="https://cds.unistra.fr/cgi-bin/Sesame" target="_blank" rel="noopener">CDS Sesame</a>, SIMBAD.
-      Known asteroids: <a href="https://ssp.imcce.fr/webservices/skybot/" target="_blank" rel="noopener">IMCCE SkyBoT</a>, JPL Horizons.</p>
+      Known asteroids: <a href="https://ssp.imcce.fr/webservices/skybot/" target="_blank" rel="noopener">IMCCE SkyBoT</a>, JPL Horizons.
+      Star overlay: <a href="https://www.cosmos.esa.int/web/gaia/dr3" target="_blank" rel="noopener">ESA Gaia DR3</a>; earlier-epoch check: NASA WISE (AllWISE); both read from <a href="https://vizier.cds.unistra.fr/" target="_blank" rel="noopener">VizieR</a> (CDS).</p>
     <p>Built for the NASA Space Apps Challenge 2026 — “Planet X and SPHEREx”. Not an official NASA product.</p>
     <div class="credit" id="credits">
       <p class="credit-k">Created by</p>
