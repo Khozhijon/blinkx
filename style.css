@@ -213,6 +213,14 @@ label { font-size: .86rem; color: var(--muted); display: grid; gap: 4px; }
   .story { font-size: .9rem; }
   .stage[data-mode="side"] { gap: 4px; }
 }
+/* very narrow screens (small phones, split-screen): never scroll sideways */
+main > *, .viewer > *, .viewer-head > * { min-width: 0; }
+@media (max-width: 400px) {
+  .tabs { grid-template-columns: 1fr 1fr; }
+  .selectors label { min-width: 120px; }
+  .chip { flex-basis: 78%; }
+  .brand { font-size: 1.2rem; }
+}
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation-duration: 2.5s; }
   .explain.flash { animation: none; }
