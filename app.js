@@ -495,9 +495,10 @@
     let best = null;
     for (let i = 0; i < frames.length; i++) for (let j = i + 1; j < frames.length; j++) {
       const dt = frames[j].mjd - frames[i].mjd; if (dt < VISIT_GAP_DAYS) continue;
-      // closest infrared colour first; a longer wait between the two breaks ties;
+      // closest infrared colour first, but a year's wait is worth about one colour step;
       // avoid pictures where the spot sits at the very edge of the detector (part of the field is missing)
-      const score = Math.abs((frames[i].wavelength_um || 0) - (frames[j].wavelength_um || 0)) - 2e-5 * dt + nearEdge(frames[i]) + nearEdge(frames[j]);
+      const wa = frames[i].wavelength_um || 1, wb = frames[j].wavelength_um || 1;
+      const score = Math.abs(wa - wb) / wa - 6e-5 * dt + nearEdge(frames[i]) + nearEdge(frames[j]);
       if (!best || score < best[0]) best = [score, frames[i].id, frames[j].id];
     }
     return best ? [best[1], best[2]] : [frames[0].id, frames[frames.length - 1].id];
