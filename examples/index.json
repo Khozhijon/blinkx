@@ -4,41 +4,59 @@
   "title": "Interstellar comet 3I/ATLAS",
   "blurb": "A visitor from another star, crossing the picture in three hours.",
   "kind": "comet",
-  "simulated": false
+  "simulated": false,
+  "ra": 167.20181,
+  "dec": 5.1485,
+  "label": "3I/ATLAS"
  },
  {
   "slug": "vesta",
   "title": "Asteroid Vesta on the move",
   "blurb": "The brightest asteroid slides past the stars in ten hours.",
   "kind": "asteroid",
-  "simulated": false
+  "simulated": false,
+  "ra": 23.37261,
+  "dec": 1.50344,
+  "label": "(4) Vesta"
  },
  {
   "slug": "psyche",
   "title": "Spot the asteroid",
   "blurb": "One of these \u201cstars\u201d is the metal asteroid Psyche. Can you find it?",
   "kind": "asteroid",
-  "simulated": false
+  "simulated": false,
+  "ra": 76.27962,
+  "dec": 19.48932,
+  "label": "(16) Psyche"
  },
  {
   "slug": "barnards-star",
   "title": "Barnard's Star",
   "blurb": "The fastest-moving star in our sky, caught a year apart.",
   "kind": "star",
-  "simulated": false
+  "simulated": false,
+  "ra": 269.44622,
+  "dec": 4.76878,
+  "label": "Barnard's Star"
  },
  {
   "slug": "3i-atlas-co2",
   "title": "A comet's hidden gas",
   "blurb": "The same comet in a colour where carbon dioxide glows.",
   "kind": "comet",
-  "simulated": false
+  "simulated": false,
+  "ra": 167.20181,
+  "dec": 5.1485,
+  "label": "3I/ATLAS"
  },
  {
   "slug": "simulated-planet-x",
   "title": "All five doodles (simulated)",
   "blurb": "A made-up field with a pretend Planet X, to show every doodle shape.",
   "kind": "simulated",
-  "simulated": true
+  "simulated": true,
+  "ra": 150.0,
+  "dec": 2.0,
+  "label": "All five doodles (simulated)"
  }
 ]

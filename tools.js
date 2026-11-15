@@ -114,29 +114,28 @@
   function doodleMapSvg() {
     const n = st.n, u = n / 128, S = 640, pad = 24, listW = 400, W = S + listW + 3 * pad, rowsH = 74, H = Math.max(S + 150, 120 + st.doodles.length * rowsH + 90);
     const f = BX.shown()[0], img = $("cv0").toDataURL("image/png");
-    const keep = st.showDoodles; st.showDoodles = true;
-    const overlay = BX.hooks.overlay ? BX.hooks.overlay(0, f, u, n) : ""; st.showDoodles = keep;
+    const overlay = $("ov0").innerHTML + BX.doodleSvg(u, n, false);
     const tx = (s) => esc(String(s == null ? "" : s));
     let list = "";
     st.doodles.forEach((d, k) => {
       const y = 110 + k * rowsH, T = TYPES[d.type] || TYPES.spark, m = d.motion || {};
       const line = d.type === "arrow" ? `${m.rate_arcsec_per_year}″/yr toward ${m.direction}` : d.type === "zigzag" ? `jumps ${m.jump_arcsec}″ between visits` : m.dist_arcsec ? `${m.dist_arcsec}″ toward ${m.direction}, ${m.rate_arcsec_per_hour}″/h` : (d.brightness && d.brightness.change_pct ? `${d.brightness.change} ${d.brightness.change_pct}%` : "seen once");
-      list += `<g transform="translate(${S + 2 * pad},${y})"><rect width="${listW}" height="${rowsH - 10}" rx="10" fill="#0e1322" stroke="#26304a"/><g transform="translate(6,4)">${BX.glyph(d, 56)}</g>` +
-        `<text x="72" y="24" fill="#e9edf7" font-size="16" font-weight="700">${tx(d.id)} · ${tx(d.nickname)}</text><text x="72" y="43" fill="${T.color}" font-size="13">${tx(T.label)}: ${tx(line)}</text>` +
-        `<text x="72" y="59" fill="${d.status === "known" ? "#7ff0b0" : "#ffc978"}" font-size="12">${d.status === "known" ? "Known: " + tx(d.known.name) + " (" + tx(d.known.source) + ")" : d.status === "unchecked" ? "Not checked against catalogues" : "Candidate (not a discovery)"}</text></g>`;
+      list += `<g transform="translate(${S + 2 * pad},${y})"><rect width="${listW}" height="${rowsH - 10}" fill="#000" stroke="#26221d"/><g transform="translate(6,4)">${BX.glyph(d, 56)}</g>` +
+        `<text x="72" y="24" fill="#efe9dd" font-size="16" font-weight="500">${tx(d.id)} · ${tx(d.nickname)}</text><text x="72" y="43" fill="${T.color}" font-size="13">${tx(T.label)}: ${tx(line)}</text>` +
+        `<text x="72" y="59" fill="${d.status === "known" ? "#efe9dd" : "#ff5a1f"}" font-size="12">${d.status === "known" ? "Known: " + tx(d.known.name) + " (" + tx(d.known.source) + ")" : d.status === "unchecked" ? "Not checked against catalogues" : "Candidate (not a discovery)"}</text></g>`;
     });
-    if (!st.doodles.length) list = `<text x="${S + 2 * pad}" y="130" fill="#98a4be" font-size="14">No doodles in this field.</text>`;
+    if (!st.doodles.length) list = `<text x="${S + 2 * pad}" y="130" fill="#aaa294" font-size="14">No doodles in this field.</text>`;
     const A = BX.byId(st.a), B = BX.byId(st.b), sim = st.example && st.example.simulated;
-    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">` +
-      `<rect width="${W}" height="${H}" fill="#0a0d16"/><text x="${pad}" y="38" fill="#e9edf7" font-size="24" font-weight="800">Sky Doodles — ${tx(st.target.name || "sky position")}</text>` +
-      `<text x="${pad}" y="60" fill="#98a4be" font-size="13">RA ${st.target.ra.toFixed(4)}°, Dec ${st.target.dec >= 0 ? "+" : ""}${st.target.dec.toFixed(4)}° · field ${(st.size * 60).toFixed(0)}′ · ${st.frames.length} exposures · north up, east left${sim ? " · SIMULATED, NOT REAL DATA" : ""}</text>` +
+    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="'IBM Plex Mono', ui-monospace, Menlo, monospace">` +
+      `<rect width="${W}" height="${H}" fill="#050506"/><text x="${pad}" y="40" fill="#efe9dd" font-size="30" font-family="'Instrument Serif', Georgia, serif">Sky Doodles — ${tx(st.target.name || "sky position")}</text>` +
+      `<text x="${pad}" y="60" fill="#aaa294" font-size="13">RA ${st.target.ra.toFixed(4)}°, Dec ${st.target.dec >= 0 ? "+" : ""}${st.target.dec.toFixed(4)}° · field ${(st.size * 60).toFixed(0)}′ · ${st.frames.length} exposures · north up, east left${sim ? " · SIMULATED, NOT REAL DATA" : ""}</text>` +
       `<image x="${pad}" y="80" width="${S}" height="${S}" preserveAspectRatio="none" href="${img}" xlink:href="${img}"/>` +
-      `<svg x="${pad}" y="80" width="${S}" height="${S}" viewBox="0 0 ${n} ${n}" preserveAspectRatio="none"><style>text{font-weight:700;paint-order:stroke;stroke:rgba(0,0,0,.75);stroke-width:${0.9 * u}px}</style>${overlay}</svg>` +
-      `<rect x="${pad}" y="80" width="${S}" height="${S}" fill="none" stroke="#26304a"/>` + list +
-      `<text x="${S + 2 * pad}" y="96" fill="#98a4be" font-size="13">length = speed · angle = direction · colour = type · thickness = brightness</text>` +
-      `<text x="${pad}" y="${S + 104}" fill="#98a4be" font-size="12">Picture: ${tx(f ? BX.fmtDate(f.date_obs) + " · " + BX.fmtWl(f) : "")}${A && B ? " · compared " + tx(BX.fmtDate(A.date_obs)) + " with " + tx(BX.fmtDate(B.date_obs)) : ""}</text>` +
-      `<text x="${pad}" y="${S + 122}" fill="#98a4be" font-size="12">${sim ? "Simulated field" : "NASA SPHEREx Level-2 images via NASA/IPAC IRSA"} · made with Blink X · ${tx(location.origin + location.pathname)}</text>` +
-      (st.skyCode && st.skyCode.length < 260 ? `<text x="${pad}" y="${S + 140}" fill="#6f7b96" font-size="10">Sky Code ${tx(st.skyCode)}</text>` : "") + `</svg>`;
+      `<svg x="${pad}" y="80" width="${S}" height="${S}" viewBox="0 0 ${n} ${n}" preserveAspectRatio="none"><style>text{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:500;paint-order:stroke;stroke:rgba(0,0,0,.8);stroke-width:${0.7 * u}px}</style>${overlay}</svg>` +
+      `<rect x="${pad}" y="80" width="${S}" height="${S}" fill="none" stroke="#40382f"/>` + list +
+      `<text x="${S + 2 * pad}" y="96" fill="#aaa294" font-size="13">length = speed · angle = direction · colour = type · thickness = brightness</text>` +
+      `<text x="${pad}" y="${S + 104}" fill="#aaa294" font-size="12">Picture: ${tx(f ? BX.fmtDate(f.date_obs) + " · " + BX.fmtWl(f) : "")}${A && B ? " · compared " + tx(BX.fmtDate(A.date_obs)) + " with " + tx(BX.fmtDate(B.date_obs)) : ""}</text>` +
+      `<text x="${pad}" y="${S + 122}" fill="#aaa294" font-size="12">${sim ? "Simulated field" : "NASA SPHEREx Level-2 images via NASA/IPAC IRSA"} · made with Blink X · ${tx(location.origin + location.pathname)}</text>` +
+      (st.skyCode && st.skyCode.length < 260 ? `<text x="${pad}" y="${S + 140}" fill="#746d61" font-size="10">Sky Code ${tx(st.skyCode)}</text>` : "") + `</svg>`;
   }
   function svgToPng(svg) {
     return new Promise((resolve, reject) => {
