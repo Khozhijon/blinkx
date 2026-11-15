@@ -271,6 +271,9 @@
       cap0 = `<span class="tag ${st.phase ? "b" : "a"}">${st.phase ? "B" : "A"}</span>${esc(label(f))}`;
     }
     $("cap0").innerHTML = cap0; $("cap1").innerHTML = cap1;
+    // text alternative for screen readers: what each picture is
+    $("cv0").setAttribute("aria-label", `SPHEREx infrared image of ${st.target.name || "this position"}: ${$("cap0").textContent}`);
+    $("cv1").setAttribute("aria-label", `SPHEREx infrared image of ${st.target.name || "this position"}: ${$("cap1").textContent}`);
     const waiting = need.some((f) => f && !f.z && !f.failed), failed = need.find((f) => f && f.failed);
     $("load0").hidden = !(waiting || failed);
     if (waiting) $("loadText").textContent = "Fetching this picture from the SPHEREx archive…";

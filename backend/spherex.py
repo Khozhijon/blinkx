@@ -16,7 +16,6 @@ from __future__ import annotations
 import base64
 import html
 import io
-import json
 import math
 import re
 import threading
@@ -694,7 +693,3 @@ def frame_to_png(meta: dict, lo: float = -2.0, hi: float = 60.0) -> bytes:
     buf = io.BytesIO()
     Image.fromarray((t * 255).astype(np.uint8), "L").save(buf, "PNG", optimize=True)
     return buf.getvalue()
-
-
-def json_dumps(obj) -> str:
-    return json.dumps(obj, separators=(",", ":"), allow_nan=False)
