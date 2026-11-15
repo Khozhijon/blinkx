@@ -347,6 +347,9 @@ body.sci .sci-only { display: block !important; } body.sci .sci-inline { display
 @keyframes flash { from { color: var(--ir); } to { color: var(--bone); } }
 .foot { padding: var(--s6) var(--gutter) var(--s7); display: grid; gap: 8px; font: 400 11px/1.7 var(--f-mono); color: var(--bone-3); max-width: 1100px; }
 .foot a { color: var(--bone-2); }
+.credit { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--rule); display: grid; gap: 6px; }
+.credit-k { font: 500 10px var(--f-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--bone-3); } .credit-k b { color: var(--ir); font-weight: 500; }
+.credit-n { font: 400 clamp(22px, 2.6vw, 32px)/1.2 var(--f-display); letter-spacing: -.005em; color: var(--bone); text-wrap: balance; } .credit-n span { font-style: italic; color: var(--ir); padding-inline: .15em; }
 
 /* ------------------------------------------------------------------ Object Card */
 .object-card { width: min(880px, calc(100vw - 32px)); max-height: calc(100svh - 32px); padding: 0; background: var(--void); color: var(--bone); border: 1px solid var(--rule-2); border-radius: 0; overflow: auto; }
