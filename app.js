@@ -523,17 +523,19 @@
 
   function summarise(search, frames) {
     const v = search.visits || [];
+    const missing = search.failed && search.failed.length ? " Part of the archive didn't answer just now, so some pictures may be missing — try again in a minute." : "";
+    if (search.deep) return "This spot is in one of SPHEREx's two deep fields, which it photographs almost every day — tens of thousands of exposures. Showing an even sample over time." + missing;
     const span = v.length ? `${monthYear(v[0].start)} – ${monthYear(v[v.length - 1].end)}` : "";
     let s = `SPHEREx has photographed this spot ${search.total.toLocaleString()} times in ${v.length} visit${v.length === 1 ? "" : "s"}${span ? ` (${span})` : ""}.`;
     if (v.length === 1) s += " With one visit so far, slow changes can't show yet — but asteroids still move within days.";
-    return s;
+    return s + missing;
   }
 
   function fillBandSelect(search) {
     const sel = $("band"); sel.innerHTML = "";
     for (const b of search.bands) {
-      const o = document.createElement("option"); o.value = b.detector; o.disabled = !b.count;
-      o.textContent = `${b.range_um[0].toFixed(2)}–${b.range_um[1].toFixed(2)} µm · ${b.count} picture${b.count === 1 ? "" : "s"}`;
+      const o = document.createElement("option"); o.value = b.detector; o.disabled = b.count === 0;
+      o.textContent = `${b.range_um[0].toFixed(2)}–${b.range_um[1].toFixed(2)} µm` + (b.count == null ? "" : ` · ${b.count} picture${b.count === 1 ? "" : "s"}`);
       sel.appendChild(o);
     }
     sel.value = st.band;
@@ -584,13 +586,13 @@
         return;
       }
       const want = search.bands.find((b) => b.detector === st.band);
-      if (!want || !want.count) st.band = search.bands.slice().sort((x, y) => y.count - x.count)[0].detector;
+      if (!want || want.count === 0) st.band = search.bands.slice().sort((x, y) => y.count - x.count)[0].detector;
       fillBandSelect(search);
       st.summary = summarise(search);
       setStatus(`${st.summary} Reading dates and colours…`);
       const res = await api("/api/frames", { ra: target.ra, dec: target.dec, band: st.band });
       if (token !== st.token) return;
-      st.totalInBand = res.frames.length;
+      st.totalInBand = res.total_in_band || res.frames.length;
       if (!res.frames.length) { $("load0").hidden = true; setStatus(`${st.summary} None of them in this colour band — choose another band.`, true); return; }
       const [a0, b0] = choosePair(res.frames);
       adoptFrames(thin(res.frames, [opts.a || a0, opts.b || b0]), opts);
