@@ -8,14 +8,18 @@ import tempfile
 import time
 from pathlib import Path
 
-CACHE_DIR = Path(os.environ.get("BLINKX_CACHE", Path(__file__).resolve().parent.parent / "cache"))
+ROOT = Path(__file__).resolve().parent.parent
+CACHE_DIR = Path(os.environ.get("BLINKX_CACHE", ROOT / "cache"))
+# Read-only search results for well-known targets, committed with the code (scripts/build_seed.py),
+# used when IRSA's query service is not answering.
+SEED_DIR = ROOT / "seed"
 
 
-def _path(key: str, ext: str) -> Path:
+def _path(key: str, ext: str, base: Path | None = None) -> Path:
     group, _, name = key.partition("/")
     safe = "".join(c if c.isalnum() or c in "._-+" else "_" for c in name)[:80]
     digest = hashlib.sha1(key.encode()).hexdigest()[:10]
-    return CACHE_DIR / group / f"{safe}.{digest}.{ext}"
+    return (base or CACHE_DIR) / group / f"{safe}.{digest}.{ext}"
 
 
 def _fresh(p: Path, max_age: float | None) -> bool:
@@ -62,3 +66,22 @@ def get_json(key: str, max_age: float | None = None):
 
 def put_json(key: str, obj) -> None:
     _write(_path(key, "json"), json.dumps(obj, separators=(",", ":")).encode())
+
+
+def get_json_stale(key: str):
+    """Any copy we have, however old: the cache first, then the committed seed. None if neither."""
+    for base in (CACHE_DIR, SEED_DIR):
+        p = _path(key, "json", base)
+        try:
+            if p.is_file():
+                return json.loads(p.read_text())
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def put_seed(key: str, obj) -> Path:
+    p = _path(key, "json", SEED_DIR)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(obj, separators=(",", ":")))
+    return p

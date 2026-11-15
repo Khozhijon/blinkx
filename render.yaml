@@ -1,7 +1,7 @@
 # Render blueprint: one free web service that serves both the API and the web page.
 services:
   - type: web
-    name: blinkx
+    name: blinkx-khofra
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt

@@ -23,6 +23,7 @@ from backend import skybot, spherex as sx  # noqa: E402
 
 OUT = ROOT / "frontend" / "examples"
 DEFS = ROOT / "scripts" / "examples.json"
+CANDIDATES = ROOT / "scripts" / "mover_candidates.json"
 
 
 def pick_frames(frames: list[dict], spec) -> list[dict]:
@@ -44,7 +45,24 @@ def pick_frames(frames: list[dict], spec) -> list[dict]:
     return out
 
 
+def separation_arcsec(ra1, dec1, ra2, dec2) -> float:
+    import math
+
+    return 3600 * math.hypot((ra1 - ra2) * math.cos(math.radians(dec1)), dec1 - dec2)
+
+
+def apply_candidate(ex: dict) -> dict:
+    """Fill position, band, frame list and predicted track from scripts/mover_candidates.json."""
+    if "candidate" not in ex:
+        return ex
+    cand = {c["slug"]: c for c in json.loads(CANDIDATES.read_text())}[ex["candidate"]]
+    out = {"ra": cand["ra"], "dec": cand["dec"], "band": cand["band"], "frames": {"ids": cand["frames"]}, **ex}
+    out["predicted"] = cand["predicted"]  # JPL Horizons position of the object at each exposure
+    return out
+
+
 def build(ex: dict) -> dict:
+    ex = apply_candidate(ex)
     ra, dec, band, size = round(ex["ra"], 5), round(ex["dec"], 5), int(ex["band"]), float(ex["size"])
     search = api.api_search(ra, dec)
     exposures = {e["id"]: e for e in sx.search_exposures(ra, dec)}
@@ -62,12 +80,23 @@ def build(ex: dict) -> dict:
         if ex.get(key) and ex[key] not in ids:
             raise SystemExit(f"{ex['slug']}: frame {key}={ex[key]} is not in the bundle")
 
+    # Catalogued movers at the moment of each frame: the object's JPL Horizons position (found by
+    # scripts/find_movers.py) plus anything else SkyBoT knows in the field that is bright enough to see.
     known = {}
-    if ex.get("known"):
+    if ex.get("predicted") or ex.get("known"):
         for f in frames:
-            objs = skybot.cone(ra, dec, size, f["mjd"])
-            keep = ex.get("known_names")
-            known[f["id"]] = [o for o in objs if not keep or o["name"] in keep]
+            objs = []
+            pred = (ex.get("predicted") or {}).get(f["id"])
+            if pred:
+                objs.append({"name": ex["object_label"], "number": None, "ra": pred[0], "dec": pred[1], "source": "JPL Horizons"})
+            try:
+                for o in skybot.cone(ra, dec, size, f["mjd"]):
+                    # SkyBoT's own entry for the same body can sit up to its 120" error filter away
+                    if not pred or separation_arcsec(o["ra"], o["dec"], pred[0], pred[1]) > 120:
+                        objs.append({**o, "source": "IMCCE SkyBoT"})
+            except skybot.SkybotError as exc:
+                print(f"  (SkyBoT unavailable for {f['id']}: {exc})")
+            known[f["id"]] = objs
 
     bundle = {
         "slug": ex["slug"],
@@ -80,6 +109,7 @@ def build(ex: dict) -> dict:
         "mode": ex.get("mode", "blink"),
         "a": ex.get("a"),
         "b": ex.get("b"),
+        "settings": ex.get("settings", {}),
         "search": search,
         "total_in_band": len(listed),
         "frames": frames,
@@ -88,7 +118,7 @@ def build(ex: dict) -> dict:
     }
     if known:
         bundle["known"] = known
-        bundle["known_default"] = True
+        bundle["known_default"] = bool(ex.get("known_default", False))
     return bundle
 
 

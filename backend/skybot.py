@@ -11,6 +11,7 @@ import httpx
 from . import cache
 
 URL = "https://ssp.imcce.fr/webservices/skybot/api/conesearch.php"
+MAX_VMAG = 18.5
 
 
 class SkybotError(RuntimeError):
@@ -26,7 +27,7 @@ def _sexa(text: str, hours: bool) -> float:
 
 
 def cone(ra: float, dec: float, size_deg: float, mjd: float) -> list[dict]:
-    ck = f"skybot/{ra:.4f}_{dec:.4f}_{size_deg:.3f}_{mjd:.4f}"
+    ck = f"skybot3/{ra:.4f}_{dec:.4f}_{size_deg:.3f}_{mjd:.4f}"
     hit = cache.get_json(ck, max_age=30 * 86400)
     if hit is not None:
         return hit
@@ -66,6 +67,9 @@ def cone(ra: float, dec: float, size_deg: float, mjd: float) -> list[dict]:
                 )
             except (KeyError, ValueError, IndexError):
                 continue
+    # Fainter than about V = 18.5 an asteroid is invisible in a single SPHEREx exposure; a label on
+    # empty sky would only confuse.
+    out = [o for o in out if not isinstance(o["vmag"], (int, float)) or o["vmag"] <= MAX_VMAG]
     out.sort(key=lambda o: (o["vmag"] is None, o["vmag"] or 99))
     cache.put_json(ck, out)
     return out

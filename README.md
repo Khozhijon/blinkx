@@ -28,6 +28,22 @@ infrared survey, in a browser, on a phone.
 | Examples | Preset targets saved as static files, so the demo still works if the archive is slow or down. |
 | Extras | Labels for known asteroids and comets in the field at that moment (IMCCE SkyBoT); mark suspected movers and copy their coordinates; every view has a shareable link. |
 
+## The saved examples
+
+| Example | What you see | SPHEREx data |
+|---|---|---|
+| Interstellar comet 3I/ATLAS | A comet from another star crosses a 12′ field in 3 h 20 min | 12 exposures, 14 Dec 2025, band 2 |
+| Asteroid Vesta on the move | The brightest asteroid moves 6′ in ten hours | 11 exposures, 16–17 Jul 2026, band 2 |
+| Spot the asteroid | (16) Psyche looks like a star until you blink | 8 exposures, 9 Sep 2025, band 3 |
+| Barnard's Star | The fastest star in the sky shifts 11″ in 13 months | 20 exposures, Aug 2025 – Sep 2026, band 2 |
+| A comet's hidden gas | 3I/ATLAS swells into a cloud at 4.26 µm, where CO₂ glows | 12 exposures, 14 Dec 2025, band 5 |
+
+The moving objects were found by `scripts/find_movers.py`: it takes an ephemeris from JPL Horizons,
+asks IRSA which exposures cover the object's position at that time, and confirms on the real
+image that there is a source on the predicted spot and nothing there in the other frames
+(`scripts/mover_candidates.json`). Not every search succeeds: comet C/2025 R2 (SWAN), for example,
+had no SPHEREx exposure in its 21–26 October 2025 window.
+
 ## Run it locally (one command)
 
 ```bash
@@ -35,7 +51,8 @@ infrared survey, in a browser, on a phone.
 ```
 
 Then open <http://localhost:8000>. The script uses [`uv`](https://docs.astral.sh/uv/) if you have
-it, otherwise it makes a `.venv` with `python3 -m venv` (Python 3.11 or newer).
+it (recommended: it picks Python 3.12 for you), otherwise it makes a `.venv` with `python3 -m venv`
+(Python 3.11–3.13).
 
 Tests (offline, a second or so):
 
@@ -97,6 +114,9 @@ FLAGS decoder matches it bit for bit.
   pixel for main-belt asteroids.
 - Names of asteroids and comets cannot be typed into the search box: they have no fixed position.
   Use the examples, or a position and date range you already know.
+- Live search depends on IRSA's query service to say which exposures cover a position. When it is
+  slow or down, Blink X retries, reuses an earlier answer if it has one (and says so), and keeps a
+  small saved index for well-known targets in `seed/`. The saved examples need no archive at all.
 - In SPHEREx's two deep fields (near the ecliptic poles) a spot has tens of thousands of exposures;
   Blink X shows an even sample in time.
 - "Mark a mover" keeps marks on your own device; there is no shared list yet.
@@ -119,7 +139,8 @@ with no backend at all, and live search wakes up in the background.
 ```
 backend/     FastAPI app: spherex.py (archive access + image maths), resolver.py, skybot.py, cache.py, main.py
 frontend/    index.html, style.css, app.js, config.js, examples/ (saved bundles)
-scripts/     build_examples.py, find_movers.py (search for asteroids/comets that SPHEREx imaged)
+scripts/     build_examples.py, build_seed.py, find_movers.py (finds asteroids/comets that SPHEREx imaged)
+seed/        saved archive search results for well-known targets (fallback when IRSA is down)
 spike/       the first data experiments and validation scripts
 tests/       offline unit tests
 submission/  project summary, resources list, AI-use note, video script, slide outline

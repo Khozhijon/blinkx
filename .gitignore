@@ -7,3 +7,4 @@ __pycache__/
 spike/sample_cutout.fits
 node_modules/
 .claude/
+spike/out/*.log

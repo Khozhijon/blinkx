@@ -1,5 +1,50 @@
 [
   {
+    "slug": "3i-atlas",
+    "candidate": "3i-atlas",
+    "kind": "comet",
+    "object_label": "3I/ATLAS",
+    "title": "Interstellar comet 3I/ATLAS",
+    "blurb": "A visitor from another star, crossing the picture in three hours.",
+    "story": "3I/ATLAS is only the third object ever seen passing through our Solar System from another star. SPHEREx caught it on 14 December 2025, five days before its closest approach to Earth. The fuzzy blob is the comet's cloud of gas and dust. It crosses the whole picture in 3 hours 20 minutes while the stars stay put. Try Time-lapse to watch it go.",
+    "name": "Comet 3I/ATLAS on 14 Dec 2025",
+    "size": 0.2,
+    "mode": "blink",
+    "a": "2025W50_2A_0685_1D2",
+    "b": "2025W50_2A_0712_4D2"
+  },
+  {
+    "slug": "vesta",
+    "candidate": "vesta",
+    "kind": "asteroid",
+    "object_label": "(4) Vesta",
+    "title": "Asteroid Vesta on the move",
+    "blurb": "The brightest asteroid slides past the stars in ten hours.",
+    "story": "Vesta is the brightest asteroid in the sky and the second-largest body in the asteroid belt; NASA's Dawn spacecraft orbited it in 2011–12. In these pictures from 16–17 July 2026 it is the dazzling object with the halo. In ten hours it moves about 6 arcminutes, a fifth of the width of the full Moon.",
+    "name": "Asteroid (4) Vesta on 16–17 Jul 2026",
+    "size": 0.2,
+    "mode": "blink",
+    "a": "2026W29_2A_0062_1D2",
+    "b": "2026W29_2A_0143_4D2"
+  },
+  {
+    "slug": "psyche",
+    "candidate": "psyche",
+    "kind": "asteroid",
+    "object_label": "(16) Psyche",
+    "title": "Spot the asteroid",
+    "blurb": "One of these “stars” is the metal asteroid Psyche. Can you find it?",
+    "story": "One of the dots in this picture is not a star. It is (16) Psyche, a metal-rich asteroid about 220 km across and the target of NASA's Psyche mission. Blink the two pictures, taken six and a half hours apart on 9 September 2025, and find the dot that moves. Then tick “Label known asteroids & comets” below to check your answer.",
+    "name": "A star field in Taurus on 9 Sep 2025",
+    "size": 0.1,
+    "mode": "blink",
+    "a": "2025W37_1A_0263_1D3",
+    "b": "2025W37_1A_0313_4D3",
+    "settings": {
+      "cross": false
+    }
+  },
+  {
     "slug": "barnards-star",
     "kind": "star",
     "title": "Barnard's Star",
@@ -17,5 +62,19 @@
     },
     "a": "2025W35_1A_0146_1D2",
     "b": "2026W39_1A_0371_1D2"
+  },
+  {
+    "slug": "3i-atlas-co2",
+    "candidate": "3i-atlas-co2",
+    "kind": "comet",
+    "object_label": "3I/ATLAS",
+    "title": "A comet's hidden gas",
+    "blurb": "The same comet in a colour where carbon dioxide glows.",
+    "story": "Same comet, same three hours, a different SPHEREx detector. Every exposure records a slightly different infrared colour. At most colours here 3I/ATLAS is a faint dot, but near 4.26 µm, where carbon dioxide gas glows, it swells into a huge cloud. In this example the big change is colour, not time: play the Time-lapse and watch the wavelength in the caption.",
+    "name": "Comet 3I/ATLAS at 4.0–4.3 µm, 14 Dec 2025",
+    "size": 0.2,
+    "mode": "time",
+    "a": "2025W50_2A_0698_3D5",
+    "b": "2025W50_2A_0712_1D5"
   }
 ]

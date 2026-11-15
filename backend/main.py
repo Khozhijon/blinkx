@@ -40,7 +40,11 @@ def _archive(fn, *args):
     try:
         return fn(*args)
     except sx.ArchiveError as exc:
-        raise HTTPException(502, f"The SPHEREx archive did not answer properly: {exc}") from exc
+        raise HTTPException(
+            502,
+            "NASA's SPHEREx archive (IRSA) is not answering right now. Please try again in a minute — "
+            f"the saved examples still work. (Detail: {str(exc)[:160]})",
+        ) from exc
 
 
 def _iso(mjd: float) -> str:
@@ -93,7 +97,7 @@ def api_search(ra: float = RA, dec: float = DEC):
         "bands": bands,
         "visits": [] if deep else _visits(exposures),
         "collections": list(sx.COLLECTIONS),
-        "failed": res["failed"],
+        "stale": bool(res.get("stale")),
     }
 
 
@@ -109,7 +113,7 @@ def api_frames(ra: float = RA, dec: float = DEC, band: int = Query(2, ge=1, le=6
         "band": band,
         "total_in_band": len(res["exposures"]),
         "deep": res["deep"],
-        "failed": res["failed"],
+        "stale": bool(res.get("stale")),
         "frames": frames,
     }
 
