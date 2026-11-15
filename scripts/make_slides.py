@@ -34,6 +34,7 @@ def bar(no):
             '<div class="cell"><span class="k">Challenge</span><span class="v">Planet X and SPHEREx</span></div>'
             '<div class="cell"><span class="k">Data</span><span class="v">NASA SPHEREx · IRSA</span></div>'
             '<div class="cell grow"><span class="k">Try it</span><span class="v ir">khozhijon.github.io/blinkx</span></div>'
+            '<div class="cell"><span class="k">Slides made with</span><span class="v">AI assistant (Claude)</span></div>'
             f'<div class="cell"><span class="k">Slide</span><span class="v">{no:02d} / 07</span></div></footer>')
 
 
@@ -173,6 +174,7 @@ slides.append(f'''
           <p class="lede">Blink X lines up real NASA SPHEREx pictures of any spot in the sky, taken months apart, so anyone can see what moved or changed.</p>
           <div class="cta-row"><span class="cta">khozhijon.github.io/blinkx {ARROW}</span><span class="text-btn">Free · in any browser · on a phone</span></div>
           <p class="proof"><i></i>Tested on NASA's five challenge objects. It found <b>WISE 0855, the coldest brown dwarf known</b>, by itself.</p>
+          <p class="proof" style="margin-top:.35em"><i></i>Slides and code written with an AI coding assistant (Claude). Every picture is a real screenshot of NASA data.</p>
           <div class="qr"><img src="img/qr.png" alt="QR code for khozhijon.github.io/blinkx"><p>Open the tool</p></div>
         </div>
         <footer class="bar"><div class="cell"><span class="k">Team</span><span class="v">KhoFra</span></div>
@@ -314,7 +316,7 @@ html = f'''<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Blink X — project slides (Team KhoFra, NASA Space Apps 2026)</title>
+  <title>Blink X — project slides (Team KhoFra, NASA Space Apps 2026), made with an AI assistant</title>
   <meta name="description" content="Seven slides about Blink X, a public tool that shows NASA SPHEREx images of any spot in the sky over time. NASA Space Apps Challenge 2026, team KhoFra.">
   <meta name="author" content="Khozhiakbar Khakimov Furkatzhonovich, Francia Constanza Coyotl Cortes (Team KhoFra)">
   <meta name="ai-assistance" content="These slides and the project's code were written with an AI coding assistant (Claude, by Anthropic). Every picture is a real screenshot of the tool showing NASA data; none is AI-generated.">

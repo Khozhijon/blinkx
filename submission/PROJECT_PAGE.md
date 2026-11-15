@@ -1,4 +1,32 @@
-# Space Apps project page — texts ready to paste
+# Space Apps project page — texts as submitted
+
+**Status: SUBMITTED FOR JUDGING on Sunday 15 November 2026, about 6:40 PM Eastern.** The page is
+public at <https://www.spaceappschallenge.org/2026/find-a-team/khofra/?tab=project>. It can be
+edited and resubmitted until 11:59 PM Eastern the same day; after that it is final.
+
+How the real form differed from the guide, and what went into it:
+
+- **Project Name**: Blink X. **Summary** (limit 1,500 characters): the "High-Level Project Summary"
+  below, 1,277 characters.
+- **Project Demonstration**: the seven-slide deck,
+  `https://khozhijon.github.io/blinkx/slides/blinkx-slides.pdf`. **Project**:
+  `https://khozhijon.github.io/blinkx/`.
+- **Project Details**: the "Detailed Project Description" below, plus one extra paragraph, "Use of
+  AI", because judges do not see the AI question: it says the code, tests, documents, the text and
+  the slides were written with an AI coding assistant (Claude), and that no image, measurement or
+  date is AI-generated.
+- **Use of Super Intelligence** is a list of tick boxes, not a text field. Ticked: Ideation or
+  Brainstorming; Research or Information Gathering; Data Analysis and Interpretation; Coding,
+  Debugging, or Troubleshooting; Writing, Editing, or Translation; Visual Design or Image Creation;
+  Presentation, Video, or Audio; Other Project-Related SI Use. Not ticked: Building SI/ML Into the
+  Project (there is no AI inside the tool).
+- **NASA Data** (8 links) and **Space Agency Partner & Other Data** (22 links) are lists of
+  name + address pairs: the sources listed below, plus every software library, the fonts, the
+  icons, the hosting services, the AI assistant and our own code repository.
+- The two declarations (terms and conditions; all work is original) were ticked by the team owner,
+  who also pressed **Submit for Judging**.
+
+The texts below are kept as the record of what was entered.
 
 Where: spaceappschallenge.org → profile icon → **My Team** → **Project** tab → **Edit**.
 Press **Save Progress** often. When every field is filled: tick the two boxes, then

@@ -5,9 +5,9 @@
 | GitHub repository | Done: <https://github.com/Khozhijon/blinkx> (public) |
 | Static page on GitHub Pages | Done: <https://khozhijon.github.io/blinkx/> |
 | Backend on Render (free plan) | Done: <https://blinkx-khofra.onrender.com> (service `blinkx-khofra`, blueprint `blinkx`) |
-| Demo video | **Needs you** — `submission/VIDEO_SCRIPT.md` |
+| Demo video | Not needed: the slide deck below is the submitted demo (`submission/VIDEO_SCRIPT.md` stays as a spare) |
 | Demo slides (the allowed alternative to the video) | Done: <https://khozhijon.github.io/blinkx/slides/blinkx-slides.pdf> (7 slides; web version at `/slides/`) |
-| Space Apps submission form | **Needs you** |
+| Space Apps submission form | **Done: submitted for judging on 15 Nov 2026, about 6:40 PM Eastern** — <https://www.spaceappschallenge.org/2026/find-a-team/khofra/?tab=project> (what was entered: `submission/PROJECT_PAGE.md`) |
 
 ## What to put in the submission form
 
