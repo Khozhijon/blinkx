@@ -19,7 +19,7 @@
   function snapshot() {
     const r5 = (v) => Math.round(v * 1e5) / 1e5;
     return {
-      v: 1, x: st.example ? st.example.slug : 0, t: st.target.name || "", f: [r5(st.target.ra), r5(st.target.dec), st.size, st.band], p: [st.a, st.b], m: st.mode,
+      v: 1, x: st.example ? st.example.slug : 0, t: st.target.name || "", f: [r5(st.target.ra), r5(st.target.dec), st.size, st.band], p: [st.a, st.b], m: st.mode, ...(st.depth && st.depth !== "single" ? { k: st.depth } : {}),
       d: st.doodles.map((d) => {
         const a = d.points[0], b = d.points[d.points.length - 1], m = d.motion || {};
         const rate = d.type === "arrow" ? m.rate_arcsec_per_year : d.type === "zigzag" ? m.jump_arcsec : m.rate_arcsec_per_hour;
@@ -52,7 +52,7 @@
     let o;
     try { o = await readSkyCode(code); } catch (e) { BX.setStatus(e.message, true); BX.toast(e.message, 5000); return false; }
     st.fromCode = { code: String(code).trim(), doodles: (o.d || []).map((r) => ({ id: r[0], type: CODE_TYPE[r[1]] || "spark", known: r[2] || null, confidence: r[3] / 100 })) };
-    const opts = { band: o.f[3], size: o.f[2], a: o.p && o.p[0], b: o.p && o.p[1], mode: o.m };
+    const opts = { band: o.f[3], size: o.f[2], a: o.p && o.p[0], b: o.p && o.p[1], mode: o.m, depth: o.k };
     if (o.x) await BX.loadExample(o.x, opts);
     else await BX.loadLive({ ra: +o.f[0], dec: +o.f[1], name: o.t || "" }, opts);
     refreshShare();
@@ -92,8 +92,8 @@
       note: "Doodles are produced by automatic change detection on NASA SPHEREx Level-2 images. 'candidate' means not matched to a catalogue; it is not a discovery claim." + (st.example && st.example.simulated ? " THIS FIELD IS SIMULATED, NOT REAL DATA." : ""),
       simulated: !!(st.example && st.example.simulated),
       field: { name: st.target.name || null, ra_deg: st.target.ra, dec_deg: st.target.dec, size_deg: st.size, band: st.band, grid_pixels: st.n, pixscale_arcsec: st.size * 3600 / st.n, spherex_pixel_arcsec: 6.15 },
-      compared: { a: st.a, b: st.b },
-      epochs: st.frames.map((f) => ({ id: f.id, date_obs_utc: f.date_obs, mjd: f.mjd, wavelength_um: f.wavelength_um, bandwidth_um: f.bandwidth_um, exposure_s: f.exptime, collection: f.collection, detector_pixel: f.pixel, sky_mjy_sr: f.sky, noise_mjy_sr: f.sigma, fits_url: f.irsa_url || null, alignment: st.align[f.id] || null })),
+      compared: { a: st.a, b: st.b, exposures: st.depth === "visit" ? "added together per visit (median)" : st.depth === "all" ? "all added together (median)" : "single exposures" },
+      epochs: (st.singles && st.singles.length ? st.singles : st.frames).map((f) => ({ id: f.id, date_obs_utc: f.date_obs, mjd: f.mjd, wavelength_um: f.wavelength_um, bandwidth_um: f.bandwidth_um, exposure_s: f.exptime, collection: f.collection, detector_pixel: f.pixel, sky_mjy_sr: f.sky, noise_mjy_sr: f.sigma, fits_url: f.irsa_url || null, alignment: st.align[f.id] || null })),
       catalogues_answered: st.checked, doodles: st.doodles,
     };
   }
@@ -149,7 +149,7 @@
 
   /* ------------------------------------------------------------------ Tracking Board: filters and the numbers table */
   st.filter = { type: "all", visit: "all" };
-  function visitLabels() { return BX.visitsOf(st.frames).map((v, i) => ({ i, label: v.label, ids: new Set(v.frames.map((f) => f.id)) })); }
+  function visitLabels() { return BX.visitsOf(st.singles && st.singles.length ? st.singles : st.frames).map((v, i) => ({ i, label: v.label, ids: new Set(v.frames.map((f) => f.id)) })); }
   BX.doodleVisible = (d) => {
     if (st.filter.type !== "all" && d.type !== st.filter.type) return false;
     if (st.filter.visit !== "all") { const v = visitLabels()[+st.filter.visit]; if (v && !d.points.some((p) => (p.frames || [p.frame]).some((id) => v.ids.has(id)))) return false; }
@@ -187,7 +187,7 @@
       (stats ? `Detection: ${stats.frames} exposures, about ${stats.sources} sources each, ${stats.anchors} anchor stars, ${stats.visits} visit(s), ${stats.bursts} group(s) of exposures. ` : "") +
       `Catalogues: SkyBoT ${yes(ck.skybot)}, SIMBAD ${yes(ck.simbad)}, JPL Horizons track ${ck.horizons ? "used" : "not used"}.`;
     el.innerHTML = `<table><thead><tr><th>#</th><th>Exposure</th><th>DATE-OBS (UTC)</th><th>MJD mid</th><th>λ µm</th><th>Δλ µm</th><th>Detector px</th><th>Exp s</th><th>PSF ″</th><th>Sky MJy/sr</th><th>Noise MJy/sr</th><th>Repaired %</th><th>Star shift ″ (dx, dy)</th><th>Stars</th><th>Release</th></tr></thead><tbody>` +
-      st.frames.map((f, i) => { const a = st.align[f.id] || {};
+      (st.singles && st.singles.length ? st.singles : st.frames).map((f, i) => { const a = st.align[f.id] || {};
         return `<tr class="${f.id === st.a ? "is-a" : f.id === st.b ? "is-b" : ""}"><td>${i + 1}</td><td>${f.irsa_url ? `<a href="${esc(f.irsa_url)}" target="_blank" rel="noopener">${esc(f.id)}</a>` : esc(f.id)}</td><td>${esc((f.date_obs || "").replace("T", " "))}</td><td>${f.mjd.toFixed(5)}</td>` +
           `<td>${f.wavelength_um ? f.wavelength_um.toFixed(4) : ""}</td><td>${f.bandwidth_um ? f.bandwidth_um.toFixed(4) : ""}</td><td>${f.pixel ? f.pixel.map((v) => v.toFixed(0)).join(", ") : ""}</td><td>${f.exptime ? f.exptime.toFixed(1) : ""}</td><td>${f.psf_fwhm_arcsec ? f.psf_fwhm_arcsec.toFixed(2) : ""}</td>` +
           `<td>${f.sky != null ? f.sky.toFixed(4) : ""}</td><td>${f.sigma != null ? Number(f.sigma).toPrecision(3) : ""}</td><td>${f.masked_fraction != null ? (f.masked_fraction * 100).toFixed(1) : ""}</td><td>${a.dx_arcsec != null ? a.dx_arcsec.toFixed(2) + ", " + a.dy_arcsec.toFixed(2) : ""}</td><td>${a.stars != null ? a.stars : ""}</td><td>${esc(f.collection || "")}</td></tr>`; }).join("") + `</tbody></table>`;

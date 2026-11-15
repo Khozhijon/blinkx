@@ -22,6 +22,7 @@
     mode: "blink", playing: true, phase: 0, timeIdx: 0, speed: 55, arm: "b",
     marking: false, marks: [], knownCache: new Map(), hover: null,
     split: 0.5, doodles: [], align: {}, checked: null, doodleState: "idle", showDoodles: true, pickedDoodle: null,
+    depth: "single", singles: [], stackWait: false,      // single exposures, or exposures added together per visit / all of them
     ...DEFAULTS,
   };
   // Shared with doodles.js (Sky Doodles, Object Cards, exports): state, helpers and a few hooks.
@@ -49,7 +50,7 @@
     return withTime ? `${d}, ${m[4]}:${m[5]} UTC` : d;
   }
   const monthYear = (iso) => { const m = /^(\d{4})-(\d\d)/.exec(iso || ""); return m ? `${MONTHS[+m[2] - 1]} ${m[1]}` : "?"; };
-  const fmtWl = (f) => f.wavelength_um ? `${f.wavelength_um.toFixed(2)} µm` : "";
+  const fmtWl = (f) => f.stack && f.stack.wl ? `${f.stack.wl[0].toFixed(2)}–${f.stack.wl[1].toFixed(2)} µm` : f.wavelength_um ? `${f.wavelength_um.toFixed(2)} µm` : "";
 
   function fmtSexa(ra, dec) {
     const h = ra / 15, hh = Math.floor(h), mm = Math.floor((h - hh) * 60), ss = ((h - hh) * 60 - mm) * 60;
@@ -67,6 +68,15 @@
     return `${dec < 0 ? "−" : "+"}${p(dd)}°${p(mm)}′` + (secs || ss ? `${p(ss)}″` : "");
   }
   const stamp = (iso) => iso ? `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC` : "";
+  /** "12–30 May 2025": the days a stack of exposures spans. */
+  function spanOf(a, b) {
+    const d = (iso) => { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(iso || ""); return m ? { y: m[1], mo: MONTHS[+m[2] - 1], d: +m[3] } : null; };
+    const x = d(a), y = d(b); if (!x || !y) return "";
+    if (x.y === y.y && x.mo === y.mo) return x.d === y.d ? `${x.d} ${x.mo} ${x.y}` : `${x.d}–${y.d} ${x.mo} ${x.y}`;
+    return x.y === y.y ? `${x.d} ${x.mo} – ${y.d} ${y.mo} ${y.y}` : `${x.d} ${x.mo} ${x.y} – ${y.d} ${y.mo} ${y.y}`;
+  }
+  /** When a picture was taken: one time for a single exposure, a span of days for exposures added together. */
+  const when = (f) => !f ? "" : f.stack ? `${f.stack.count} exposures added · ${spanOf(f.stack.first, f.stack.last)}` : stamp(f.date_obs);
   function fmtGap(days) {
     const d = Math.abs(days);
     if (d < 1 / 24) return `${Math.round(d * 1440)} minutes`;
@@ -280,7 +290,7 @@
     let cap0 = "", cap1 = "";
     // two pictures from the same day are told apart by their time
     const sameDay = !!(A && B && A !== B && (A.date_obs || "").slice(0, 10) === (B.date_obs || "").slice(0, 10));
-    const label = (f) => f ? `${stamp(f.date_obs)}  ·  ${fmtWl(f)}` : "";
+    const label = (f) => f ? `${when(f)}  ·  ${fmtWl(f)}` : "";
     if (st.mode === "side") {
       need.push(A, B);
       if (A && A.z) paint(0, frameCanvas(A, 1), A); else blank(0);
@@ -289,11 +299,11 @@
     } else if (st.mode === "diff") {
       need.push(A, B);
       if (A && B && A.z && B.z) paint(0, diffCanvas(A, B)); else blank(0);
-      cap0 = `<span class="tag d">B − A</span>${esc(stamp(B && B.date_obs))}  −  ${esc(stamp(A && A.date_obs))}`;
+      cap0 = `<span class="tag d">B − A</span>${esc(when(B))}  −  ${esc(when(A))}`;
     } else if (st.mode === "time") {
       const f = st.frames[st.timeIdx]; need.push(f);
       if (f && f.z) paint(0, frameCanvas(f, scaleFor(f, A && A.z ? A : null)), f); else blank(0);
-      cap0 = `<span class="tag t">${st.timeIdx + 1} / ${st.frames.length}</span>${esc(f ? `${stamp(f.date_obs)}  ·  ${fmtWl(f)}` : "")}`;
+      cap0 = `<span class="tag t">${st.timeIdx + 1} / ${st.frames.length}</span>${esc(label(f))}`;
       $("timeOut").textContent = `${st.timeIdx + 1} of ${st.frames.length}`;
       if (+$("timeSlider").value !== st.timeIdx) $("timeSlider").value = st.timeIdx;
     } else if (st.mode === "swipe") {
@@ -392,6 +402,7 @@
 
   /* ------------------------------------------------------------------ known objects (SkyBoT) */
   function knownFor(f) {
+    if (f.stack) return [];                                      // asteroids are somewhere else in every exposure of a stack
     if (st.knownCache.has(f.id)) return st.knownCache.get(f.id);
     st.knownCache.set(f.id, null);                               // in flight
     if (st.example && st.example.known && st.example.size === st.size && st.example.known[f.id]) {
@@ -423,15 +434,16 @@
       const lab = document.createElement("div"); lab.className = "vlabel"; lab.textContent = v.label; g.appendChild(lab);
       for (const f of v.frames) {
         const b = document.createElement("button"); b.type = "button"; b.className = "thumb pending"; b.dataset.id = f.id;
-        b.title = `${fmtDate(f.date_obs)} — ${fmtWl(f)}`;
+        b.title = `${f.stack ? when(f) : fmtDate(f.date_obs)} — ${fmtWl(f)}`;
         const d = /^\d{4}-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(f.date_obs || "");
-        b.innerHTML = `<canvas width="66" height="66"></canvas><small>${d ? `${+d[2]} ${MONTHS[+d[1] - 1]} ${d[3]}:${d[4]}` : ""}<br>${esc(fmtWl(f))}</small>`;
+        b.innerHTML = `<canvas width="66" height="66"></canvas><small>${f.stack ? `${f.stack.count} added` : d ? `${+d[2]} ${MONTHS[+d[1] - 1]} ${d[3]}:${d[4]}` : ""}<br>${esc(fmtWl(f))}</small>`;
         b.addEventListener("click", () => pickFrame(f.id));
         g.appendChild(b);
       }
       strip.appendChild(g);
     }
     const total = st.totalInBand || st.frames.length;
+    if (st.frames[0] && st.frames[0].stack) { const used = st.frames.reduce((k, f) => k + f.stack.count, 0); $("stripCount").textContent = `— ${st.frames.length} deep picture${st.frames.length === 1 ? "" : "s"}, made by adding ${used} exposures together`; return; }
     $("stripCount").textContent = total > st.frames.length ? `— showing ${st.frames.length} of ${total} in this colour band` : `— ${st.frames.length} in this colour band`;
   }
 
@@ -476,7 +488,7 @@
       for (const v of visitsOf(st.frames)) {
         const g = document.createElement("optgroup"); g.label = `Visit of ${v.label}`;
         for (const f of v.frames) {
-          const o = document.createElement("option"); o.value = f.id; o.textContent = `${fmtDate(f.date_obs)} · ${fmtWl(f)}`; g.appendChild(o);
+          const o = document.createElement("option"); o.value = f.id; o.textContent = `${f.stack ? when(f) : fmtDate(f.date_obs)} · ${fmtWl(f)}`; g.appendChild(o);
         }
         sel.appendChild(g);
       }
@@ -487,7 +499,7 @@
   function updateGap() {
     const A = byId(st.a), B = byId(st.b), el = $("gap");
     if (!A || !B) { el.textContent = ""; return; }
-    if (A === B) { el.textContent = "A and B are the same picture — choose two different ones to compare."; return; }
+    if (A === B) { el.textContent = A.stack && st.frames.length === 1 ? "Every exposure is added into this one deep picture. Choose “Added up, each visit” to compare dates." : "A and B are the same picture — choose two different ones to compare."; return; }
     const dt = B.mjd - A.mjd;
     el.textContent = `B was taken ${fmtGap(dt)} ${dt >= 0 ? "after" : "before"} A.`;
     updateColourMatch(A, B);
@@ -517,6 +529,11 @@
 
   function factCard(f, cls, title) {
     if (!f) return "";
+    if (f.stack) return `<div class="fact ${cls}"><h3>${esc(title)}</h3><dl>` +
+      `<dt>Made from</dt><dd>${f.stack.count} exposures added together <span class="muted">(${f.stack.count >= 3 ? "the middle value of each pixel, so cosmic-ray hits and passing asteroids drop out" : "the average of each pixel"})</span></dd>` +
+      `<dt>Taken</dt><dd>${esc(spanOf(f.stack.first, f.stack.last))} <span class="muted">(first to last DATE-OBS)</span></dd>` +
+      `<dt>Colour</dt><dd>${esc(fmtWl(f))} infrared · band ${f.detector}</dd>` +
+      `<dt>Depth</dt><dd>noise about ${f.stack.gain.toFixed(1)}× lower than in one exposure</dd></dl></div>`;
     return `<div class="fact ${cls}"><h3>${esc(title)}</h3><dl>` +
       `<dt>Taken</dt><dd>${esc(fmtDate(f.date_obs))} <span class="muted">(DATE-OBS in the image file)</span></dd>` +
       `<dt>Colour</dt><dd>${f.wavelength_um ? f.wavelength_um.toFixed(3) + " µm" : "?"} infrared · band ${f.detector}</dd>` +
@@ -546,7 +563,7 @@
     st.mode = mode;
     for (const t of document.querySelectorAll(".tabs button")) t.setAttribute("aria-selected", String(t.dataset.mode === mode));
     $("stage").dataset.mode = mode;
-    $("modeHint").textContent = HINTS[mode];
+    $("modeHint").textContent = HINTS[mode] + (st.frames[0] && st.frames[0].stack ? " Each picture here is many exposures added together: fainter things show, but anything that moves within a visit is averaged away." : "");
     const anim = mode === "blink" || mode === "time";
     $("playBtn").hidden = !anim; $("speedWrap").hidden = !anim; $("timeWrap").hidden = mode !== "time";
     if (mode === "time") { const i = st.frames.findIndex((f) => f.id === st.a); if (i >= 0 && !st.playing) st.timeIdx = i; }
@@ -639,7 +656,10 @@
     const done = st.frames.filter((f) => f.z || f.failed).length, bad = st.frames.filter((f) => f.failed).length;
     if (done < st.frames.length) setStatus(`${st.summary} Loading pictures… ${done} of ${st.frames.length}.`);
     else setStatus(`${st.summary}${bad ? ` ${bad} picture${bad > 1 ? "s" : ""} could not be loaded.` : ""}`);
-    if (done === st.frames.length) { updateFacts(); if (!st.example && st.doodleState === "idle" && BX.hooks.framesReady) BX.hooks.framesReady(); }
+    if (done === st.frames.length) {
+      updateFacts(); if (!st.example && st.doodleState === "idle" && BX.hooks.framesReady) BX.hooks.framesReady();
+      if (st.stackWait) { showFrames({ mode: st.mode }); schedule(); }
+    }
   }
 
   function summarise(search, frames) {
@@ -666,6 +686,7 @@
   function resetView(target, opts) {
     st.token++; queue = []; renderCache = new Map(); scaleCache = new Map(); st.knownCache = new Map();
     st.target = target; st.frames = []; st.a = st.b = null; st.phase = 0; st.timeIdx = 0; st.hover = null;
+    st.singles = []; st.stackWait = false; st.depth = opts.depth === "visit" || opts.depth === "all" ? opts.depth : "single"; $("depth").value = st.depth;
     st.band = +opts.band || 2; st.size = +opts.size || 0.1; st.n = gridSize(st.size);
     st.marks = loadMarks();
     st.doodles = []; st.align = {}; st.checked = null; st.doodleState = "idle"; st.pickedDoodle = null;
@@ -682,17 +703,65 @@
   }
 
   function adoptFrames(frames, opts) {
-    st.frames = frames;
+    st.singles = frames;
     if (frames[0] && frames[0].n) st.n = frames[0].n;            // saved examples carry their own grid size
+    showFrames(opts);
+  }
+
+  /** Put the single exposures, or the same exposures added together (st.depth), on screen. */
+  function showFrames(opts = {}) {
+    const singles = st.singles, ready = singles.length > 0 && singles.every((f) => f.z || f.failed);
+    let frames = singles; st.stackWait = false;
+    if (st.depth !== "single") {
+      const have = singles.filter((f) => f.z);
+      if (ready && have.length) frames = stacksOf(have);
+      else st.stackWait = true;                                  // single exposures stay on screen until every picture has arrived
+    }
+    st.frames = frames; renderCache = new Map(); scaleCache = new Map();
     const ids = new Set(frames.map((f) => f.id));
     let [a, b] = choosePair(frames);
     if (opts.a && ids.has(opts.a)) a = opts.a;
     if (opts.b && ids.has(opts.b)) b = opts.b;
-    st.a = a; st.b = b;
+    st.a = a; st.b = b; st.phase = 0;
     $("timeSlider").max = Math.max(0, frames.length - 1);
     st.timeIdx = Math.max(0, frames.findIndex((f) => f.id === a));
+    $("depth").value = st.depth;
     buildStrip(); fillPairSelects(); updateGap(); updateFacts();
     setMode(opts.mode && HINTS[opts.mode] ? opts.mode : st.mode);
+  }
+
+  /** Exposures added together: one deep picture per visit, or one for everything in this colour band. */
+  function stacksOf(singles) {
+    const groups = (st.depth === "all" ? [singles] : visitsOf(singles).map((v) => v.frames)).filter((g) => g.length);
+    return groups.map((g, i) => makeStack(g, i));
+  }
+  /**
+   * The middle value (median) of each pixel when there are three or more exposures, so cosmic-ray hits and things
+   * that move within the visit drop out; the average for two. Pixel values stay in units of sky noise: the result is
+   * scaled up so that its noise is 1 again, which is why faint things rise out of it.
+   */
+  function makeStack(g, i) {
+    const n = g[0].n, len = n * n, m = g.length, z = new Float32Array(len), buf = new Float32Array(m);
+    for (let p = 0; p < len; p++) {
+      let c = 0;
+      for (let k = 0; k < m; k++) { const v = g[k].z[p]; if (v === v) buf[c++] = v; }
+      if (!c) { z[p] = NaN; continue; }
+      if (c >= 3) { const q = buf.subarray(0, c).sort(); z[p] = (c & 1 ? q[c >> 1] : 0.5 * (q[(c >> 1) - 1] + q[c >> 1])) * Math.sqrt(c) / 1.2533; }
+      else { let sum = 0; for (let k = 0; k < c; k++) sum += buf[k]; z[p] = sum / Math.sqrt(c); }
+    }
+    const wl = g.map((f) => f.wavelength_um).filter(Boolean), mid = g[m >> 1];
+    return {
+      id: `stack-${st.depth}-${i + 1}`, n, z, loaded: true, detector: mid.detector, band: mid.band, collection: mid.collection,
+      date_obs: g[0].date_obs, mjd: g.reduce((t, f) => t + f.mjd, 0) / m, wavelength_um: wl.length ? wl.reduce((t, v) => t + v, 0) / wl.length : null,
+      stack: { count: m, ids: g.map((f) => f.id), first: g[0].date_obs, last: g[m - 1].date_obs, wl: wl.length ? [Math.min(...wl), Math.max(...wl)] : null, gain: m >= 3 ? Math.sqrt(m) / 1.2533 : Math.sqrt(m) },
+    };
+  }
+  function setDepth(depth) {
+    st.depth = depth === "visit" || depth === "all" ? depth : "single";
+    if (st.depth !== "single") ensureLoaded(st.singles, false);
+    showFrames({ mode: st.mode });
+    if (st.stackWait) toast("The exposures will be added together as soon as all of them have arrived.");
+    schedule(); syncUrl();
   }
 
   /** Live path: ask the server (which asks IRSA / AWS). */
@@ -745,7 +814,7 @@
     let ex;
     try { ex = await getJson(`examples/${slug}.json`); } catch (e) { setStatus("Couldn't open that example. " + e.message, true); return; }
     st.example = ex;
-    const token = resetView(ex.target, { band: ex.band, size: ex.size });
+    const token = resetView(ex.target, { band: ex.band, size: ex.size, depth: opts.depth });
     if (token !== st.token) return;
     st.search = ex.search; st.totalInBand = ex.total_in_band || ex.frames.length;
     fillBandSelect(ex.search);
@@ -780,8 +849,8 @@
       $("band").value = st.band; $("size").value = String(st.size);
       toast("The simulated field exists only in this one view. Pick a real example or search the sky to change these."); return;
     }
-    const opts = { band: st.band, size: st.size, mode: st.mode, ...change };
-    if (st.example && +opts.band === st.example.band && +opts.size === st.example.size) { loadExample(st.example.slug, { mode: st.mode }); return; }
+    const opts = { band: st.band, size: st.size, mode: st.mode, depth: st.depth, ...change };
+    if (st.example && +opts.band === st.example.band && +opts.size === st.example.size) { loadExample(st.example.slug, { mode: st.mode, depth: st.depth }); return; }
     loadLive(st.target, opts);
   }
 
@@ -807,7 +876,7 @@
       if (st.target.name) p.set("name", st.target.name);
       p.set("band", st.band); p.set("size", st.size);
     }
-    if (st.target) { p.set("mode", st.mode); if (st.a) p.set("a", st.a); if (st.b) p.set("b", st.b); }
+    if (st.target) { p.set("mode", st.mode); if (st.depth !== "single") p.set("depth", st.depth); if (st.a) p.set("a", st.a); if (st.b) p.set("b", st.b); }
     const qs = p.toString();
     return location.origin + location.pathname + (qs ? "?" + qs : "");
   }
@@ -862,6 +931,7 @@
     });
     $("band").addEventListener("change", (e) => reload({ band: +e.target.value }));
     $("size").addEventListener("change", (e) => reload({ size: +e.target.value }));
+    $("depth").addEventListener("change", (e) => setDepth(e.target.value));
     $("hi").addEventListener("input", (e) => { st.hi = +e.target.value; invalidate(); });
     $("lo").addEventListener("input", (e) => { st.lo = +e.target.value; invalidate(); });
     $("cmap").addEventListener("change", (e) => { st.cmap = e.target.value; invalidate(); });
@@ -957,7 +1027,7 @@
       }
     } catch (_) { $("exampleList").innerHTML = '<span class="muted">Examples are unavailable.</span>'; }
 
-    const p = new URLSearchParams(location.search), opts = { band: p.get("band"), size: p.get("size"), a: p.get("a"), b: p.get("b"), mode: p.get("mode") };
+    const p = new URLSearchParams(location.search), opts = { band: p.get("band"), size: p.get("size"), a: p.get("a"), b: p.get("b"), mode: p.get("mode"), depth: p.get("depth") };
     if (p.get("sky") && BX.openSky) BX.openSky(p.get("sky")).then((ok) => { if (!ok && examples.length) loadExample(examples[0].slug); });
     else if (p.get("ex") && examples.some((e) => e.slug === p.get("ex"))) loadExample(p.get("ex"), opts);
     else if (p.get("ra") && p.get("dec") && isFinite(+p.get("ra")) && isFinite(+p.get("dec"))) loadLive({ ra: +p.get("ra"), dec: +p.get("dec"), name: p.get("name") || "" }, opts);
@@ -975,7 +1045,7 @@
 
   Object.assign(BX, {
     $, esc, api, getJson, toast, setStatus, fmtDate, fmtSexa, fmtGap, fmtWl, monthYear, skyToPix, pixToSky, byId, schedule, invalidate,
-    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive,
+    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive, setDepth, when,
   });
   boot();
 })();

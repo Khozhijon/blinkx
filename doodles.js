@@ -185,7 +185,7 @@
 
   /** Live searches: ask the server to analyse the exposures that are on screen. */
   BX.hooks.framesReady = async () => {
-    const ok = st.frames.filter((f) => f.z), token = st.token;
+    const ok = (st.singles.length ? st.singles : st.frames).filter((f) => f.z && !f.stack), token = st.token;   // always the single exposures
     if (ok.length < 2) { st.doodleState = "done"; renderBoard(); return; }
     let ids = ok.map((f) => f.id);
     if (ids.length > 40) { const keep = new Set([st.a, st.b]), stepSize = ids.length / 38; for (let x = 0; x < ids.length; x += stepSize) keep.add(ids[Math.floor(x)]); ids = ids.filter((i) => keep.has(i)); }
@@ -266,6 +266,7 @@
       `<div class="actions"><button class="btn primary" type="button" id="cardBlink">${d.sightings > 1 ? "Blink first vs last sighting" : "Show the picture it is in"}</button>` +
       `<button class="btn ghost" type="button" id="cardCopy">Copy coordinates</button></div>`;
     $("cardBlink").addEventListener("click", () => {
+      if (st.depth !== "single") BX.setDepth("single");         // sightings are single exposures
       const fa = BX.byId(first.frame), fb = BX.byId(last.frame);
       if (fa) st.a = fa.id; if (fb && fb !== fa) st.b = fb.id;
       if (fa || fb) { BX.afterPairChange(); BX.setMode("blink"); BX.setPlaying(true); }

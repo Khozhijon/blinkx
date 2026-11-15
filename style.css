@@ -188,7 +188,7 @@ input[type="checkbox"]:checked { background: var(--ir) url("data:image/svg+xml,%
 .target h1 { font: 400 clamp(36px, 5.2vw, 72px)/1 var(--f-display); letter-spacing: -.015em; margin: 6px 0 10px; }
 .coords { font-size: 12.5px; color: var(--bone-2); max-width: 78ch; line-height: 1.5; }
 .selectors { display: flex; gap: var(--s4); flex-wrap: wrap; }
-.selectors label { min-width: 236px; flex: 1; }
+.selectors label { min-width: 180px; flex: 1; }
 .story { font: 400 16px/1.55 var(--f-body); color: var(--bone); max-width: 72ch; padding-left: var(--s4); border-left: 1px solid var(--ir); margin-top: var(--s4); }
 .story.simulated { border-left-width: 3px; }
 
