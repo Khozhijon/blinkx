@@ -203,6 +203,11 @@ label { font-size: .86rem; color: var(--muted); display: grid; gap: 4px; }
   .ab { grid-template-columns: 1fr; }
   .ab #swapBtn { justify-self: center; transform: rotate(90deg); }
   .tabs button { font-size: .86rem; }
+  /* phones: picture first, colour-band and field pickers after the A/B pickers */
+  .viewer-head { display: contents; }
+  .selectors { order: 1; }
+  .strip-head, .strip, .tuning, .marks, .facts { order: 2; }
+  .story { font-size: .9rem; }
   .stage[data-mode="side"] { gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
