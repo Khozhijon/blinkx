@@ -105,15 +105,17 @@
     "kind": "star",
     "title": "WISE 0855",
     "blurb": "The coldest brown dwarf known. Too faint for one exposure — until they are added up.",
-    "story": "WISE 0855 is the coldest brown dwarf known: colder than ice, and only about 7 light-years away. In a single two-minute SPHEREx exposure it barely rises out of the noise. Here every visit's exposures are added together, and a faint dot appears in the cross-hair. Blink the visits: it steps toward the west, about 8 arcseconds a year. Blink X found it by itself this way.",
+    "story": "WISE 0855 is the coldest brown dwarf known: colder than ice, and only about 7 light-years away. In a single two-minute SPHEREx exposure it barely rises out of the noise. Here every visit's exposures are added together, and a faint dot appears in the cross-hair. Blink the visits: it steps toward the west, about 8 arcseconds a year. Blink X found it by itself this way; even ESA's Gaia star catalogue does not list it.",
     "name": "WISE 0855−0714",
     "ra": 133.75931,
     "dec": -7.24215,
     "size": 0.1,
-    "band": 6,
+    "band": 5,
     "mode": "blink",
     "depth": "visit",
-    "frames": "all"
+    "frames": {
+      "max": 48
+    }
   },
   {
     "slug": "rw-aurigae",

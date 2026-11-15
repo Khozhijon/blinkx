@@ -17,8 +17,9 @@ Claude Code.
 
 - It did not generate, alter or invent any image or measurement. Every pixel and every date in the
   tool comes from NASA SPHEREx files; the AI wrote the code that reads them.
-- There is no AI model inside the product. Blink X uses ordinary arithmetic (alignment, stretch,
-  subtraction); what you see is the data.
+- There is no AI model inside the product. Blink X uses ordinary arithmetic and classical image
+  analysis (alignment, stretch, subtraction, adding exposures together, source finding with
+  photutils); what you see is the data.
 
 **Human role**
 

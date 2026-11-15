@@ -13,7 +13,7 @@ import math
 
 import httpx
 
-from . import cache, skybot
+from . import cache, gaia, skybot
 
 SIMBAD_TAP = (
     "https://simbad.cfa.harvard.edu/simbad/sim-tap/sync",
@@ -81,6 +81,66 @@ def _clean_name(main_id: str) -> str:
 
 def _year(mjd: float) -> float:
     return 2000.0 + (mjd - 51544.5) / 365.25
+
+
+def already_there(d: dict) -> dict | None:
+    """Was a source sitting on this very spot years ago? Then it is not the fast mover it seems to be.
+
+    A doodle that claims a drift of an arcsecond a year or more is checked against two earlier all-sky
+    surveys: NASA's WISE (AllWISE, positions from 2010) and ESA's Gaia DR3 (2016.0). A source within
+    2.5 arcseconds of where the doodle starts means nothing travelled there from far away.
+    Returns what was found, or None (also None when the catalogue service did not answer)."""
+    m = d.get("motion") or {}
+    rate = m.get("rate_arcsec_per_year") or 0.0
+    if d["type"] != "arrow" or rate < 1.0:
+        return None
+    p = d["points"][0]
+    year = _year(p["t"])
+    for source, cols, epoch, name in (("II/328/allwise", "RAJ2000,DEJ2000,W1mag,W2mag", 2010.5, "WISE"), ("I/355/gaiadr3", "RA_ICRS,DE_ICRS,Gmag,pmRA,pmDE", 2016.0, "Gaia")):
+        if rate * (year - epoch) < 8.0:  # it would not have travelled far enough since then for this test to mean anything
+            continue
+        rows = gaia.vizier_near(source, cols, p["ra"], p["dec"], 2.5)
+        for row in rows or []:
+            pm = math.hypot(row.get("pmRA") or 0.0, row.get("pmDE") or 0.0) / 1000.0 if name == "Gaia" else 0.0
+            if pm > 0.3 * rate:
+                continue  # Gaia itself says this star moves about that fast
+            return {"survey": name, "year": int(epoch), "sep_arcsec": round(float(row["_r"]), 1), "claimed_rate": round(rate, 1),
+                    "ra": p["ra"], "dec": p["dec"], "id": d["id"]}
+    return None
+
+
+def expected_movers(doodles: list[dict], ra0: float, dec0: float, size_deg: float, mjd: float, min_pm: float = 1.0) -> list[dict]:
+    """Catalogued fast movers that should be inside the field now but that no doodle explains.
+
+    Being honest cuts both ways: when SIMBAD lists a star or brown dwarf moving an arcsecond a year or more
+    here and the search did not flag it (too faint or too red in this band, or too little time between
+    visits), the page says so instead of staying silent."""
+    stars = fast_stars(ra0, dec0, size_deg)
+    if not stars:
+        return []
+    named = {d["known"]["name"] for d in doodles if d.get("known")}
+    dt = _year(mjd) - 2000.0
+    half = size_deg / 2.0 * 0.94
+    best: dict[tuple, dict] = {}
+    for srow in stars:
+        if str(srow.get("otype", "")).startswith("Pl"):
+            continue
+        pm = math.hypot(srow["pmra"], srow["pmdec"]) / 1000.0
+        name = _clean_name(srow["main_id"])
+        if pm < min_pm or name in named:
+            continue
+        dec_now = srow["dec"] + srow["pmdec"] * dt / 3.6e6
+        ra_now = srow["ra"] + srow["pmra"] * dt / 3.6e6 / max(math.cos(math.radians(srow["dec"])), 1e-6)
+        dx = (ra_now - ra0) * math.cos(math.radians(dec0))
+        if abs(dx) > half or abs(dec_now - dec0) > half:
+            continue
+        if any(_sep_arcsec(ra_now, dec_now, q["ra"], q["dec"]) < 15.0 for d in doodles for q in d["points"][-1:]):
+            continue  # a doodle sits on it (the catalogue check simply did not name it)
+        row = {"name": name, "kind": OTYPE_WORDS.get(srow.get("otype"), "fast-moving star"), "pm_arcsec_per_year": round(pm, 2),
+               "ra": round(ra_now, 5), "dec": round(dec_now, 5), "source": "SIMBAD"}
+        key = (round(ra_now * 400), round(dec_now * 400))  # components of one system share a spot: keep the first
+        best.setdefault(key, row)
+    return sorted(best.values(), key=lambda r: -r["pm_arcsec_per_year"])[:4]
 
 
 def annotate(doodles: list[dict], ra0: float, dec0: float, size_deg: float, predicted: dict | None = None, label: str | None = None, kind: str | None = None) -> dict:
@@ -158,6 +218,8 @@ def annotate(doodles: list[dict], ra0: float, dec0: float, size_deg: float, pred
                         break
         if d["known"]:
             d["status"] = "known"
+        elif d["type"] == "arrow" and (there := already_there(d)):
+            d["dismissed"] = there  # the caller drops it and reports why
         elif not d["checked"]:
             d["status"] = "unchecked"  # no catalogue could be reached: say so rather than call it new
         explain(d)

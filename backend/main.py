@@ -176,7 +176,7 @@ def api_doodles(ra: float = RA, dec: float = DEC, size: float = 0.1, ids: str = 
     wanted = [i for i in ids.split(",") if i][:48]
     if len(wanted) < 2:
         raise HTTPException(400, "Change detection needs at least two exposures.")
-    ck = "doodles2/" + f"{ra}_{dec}_{size}_" + hashlib.sha1(",".join(sorted(wanted)).encode()).hexdigest()[:16]
+    ck = "doodles5/" + f"{ra}_{dec}_{size}_" + hashlib.sha1(",".join(sorted(wanted)).encode()).hexdigest()[:16]
     hit = sx.cache.get_json(ck, max_age=6 * 3600)
     if hit is not None:
         return hit
@@ -184,6 +184,10 @@ def api_doodles(ra: float = RA, dec: float = DEC, size: float = 0.1, ids: str = 
     frames = detect.frames_from_encoded(encoded, sx.decode_frame)
     res = detect.detect(frames, ra, dec, size)
     res["checked"] = catalogs.annotate(res["doodles"], ra, dec, size)
+    # apparent drifts that an earlier survey rules out (a source was already on that spot years ago) are set aside, and reported
+    res["dismissed"] = [d["dismissed"] for d in res["doodles"] if d.get("dismissed")]
+    res["doodles"] = [d for d in res["doodles"] if not d.get("dismissed")]
+    res["expected"] = catalogs.expected_movers(res["doodles"], ra, dec, size, float(sum(f["mjd"] for f in encoded) / len(encoded)))
     sx.cache.put_json(ck, res)
     return res
 

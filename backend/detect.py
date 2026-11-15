@@ -93,6 +93,7 @@ class Frame:
     scale: float = 1.0  # brightness of this frame relative to the others (stars in common)
     shift: tuple[float, float] = (0.0, 0.0)  # star-pattern offset removed, grid px
     n_align: int = 0
+    complete: np.ndarray | None = None  # for a stack of exposures: where all of them had data
 
 
 def _photometry(img: np.ndarray, pos: np.ndarray, pix: float):
@@ -484,6 +485,11 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
         shape = float(np.median([dets[k].flux / dets[k].peak for k in ks]))
         if len(ks) < 2 or (star_shape is not None and not (0.4 * star_shape <= shape <= 4.0 * star_shape)):
             continue  # seen in one exposure only: most likely a cosmic-ray hit, leftover charge or a reflection
+        per_visit: dict[int, int] = {}
+        for k in ks:
+            per_visit[int(visit[dets[k].f])] = per_visit.get(int(visit[dets[k].f]), 0) + 1
+        if max(per_visit.values()) < 2:
+            continue  # one exposure here and one months later: a faint source at the edge of detection, not an event
         singles.append(c)
     singles.sort(key=lambda c: -c["peak"])
     kept = []
@@ -807,6 +813,7 @@ def _stack(frames: list[Frame], idx: list[int]) -> Frame:
     fr = Frame(mid.id, float(np.mean([frames[i].mjd for i in idx])), mid.date, float(np.mean([frames[i].wl for i in idx])), img, mid.pix,
                float(np.median([frames[i].sigma for i in idx])) / gain)
     find_sources(fr)
+    fr.complete = cnt == len(idx)  # pixels that every exposure of the visit covered
     return fr
 
 
@@ -850,11 +857,11 @@ def _deep_drifts(frames, visit, pix, n, ra0, dec0, size_deg, taken, to_mjy) -> l
     X, Y = X - off_x, Y - off_y
     dx, dy = X[:, -1] - X[:, 0], Y[:, -1] - Y[:, 0]
     disp = np.hypot(dx, dy)
-    scatter = max(1.4826 * float(np.median(np.abs(np.r_[dx, dy]))), 0.05 * s)  # how far ordinary stars seem to move, per axis
+    scatter = max(1.4826 * float(np.median(np.abs(np.r_[dx, dy]))), 0.05 * s)  # how far ordinary sources seem to move, per axis
     t_deep = np.array([stacks[k][1].mjd for k in deep])
     out = []
     for c, chain in enumerate(chains):
-        if disp[c] < 0.5 * s or disp[c] < 6.0 * scatter:
+        if disp[c] < 0.5 * s or disp[c] < 5.0 * scatter:
             continue
         frs = [stacks[k][1] for k in deep]
         peaks = [float(fr.peak[j]) for fr, j in zip(frs, chain)]
@@ -872,11 +879,19 @@ def _deep_drifts(frames, visit, pix, n, ra0, dec0, size_deg, taken, to_mjy) -> l
 
         if any(crowded(fr, j) for fr, j in zip(frs, chain)):
             continue
+
+        # where a visit's exposures do not all cover the spot (the edge of a detector), the centre of a source is not to be trusted
+        def covered(fr, j):
+            yi, xi = int(round(float(fr.y[j]))), int(round(float(fr.x[j])))
+            r = int(math.ceil(1.5 * s))
+            return bool(fr.complete[max(0, yi - r):yi + r + 1, max(0, xi - r):xi + r + 1].all())
+
+        if not all(covered(fr, j) for fr, j in zip(frs, chain)):
+            continue
         if any(math.hypot(X[c, 0] - qx, Y[c, 0] - qy) < 2.5 * s for qx, qy in taken):
             continue
         vx, vy, rms = _fit_line(t_deep, X[c] * pix, Y[c] * pix)  # arcsec per day
-        if len(deep) >= 3 and rms > max(0.25 * NATIVE, 0.15 * disp[c] * pix):  # three or more visits must fall on one straight line
-            continue
+
         # one sighting per visit: the deep pictures as measured, shallower visits where the straight line says to look
         tm, xm, ym = float(t_deep.mean()), float(X[c].mean()), float(Y[c].mean())
         seen = []
@@ -902,6 +917,18 @@ def _deep_drifts(frames, visit, pix, n, ra0, dec0, size_deg, taken, to_mjy) -> l
         days = float(tt.max() - tt.min())
         dist = math.hypot(vx, vy) * days
         if dist < 0.5 * NATIVE:
+            continue
+        # steady motion: every sighting in between must sit where a straight, even-paced path from the first to the last puts it
+        (ta, xa, ya), (tb, xb, yb) = [(q[2].mjd, q[3], q[4]) for q in (seen[0], seen[-1])]
+        steady = all(
+            math.hypot(q[3] - (xa + (xb - xa) * (q[2].mjd - ta) / (tb - ta)), q[4] - (ya + (yb - ya) * (q[2].mjd - ta) / (tb - ta)))
+            <= max(0.15 * s, 0.2 * math.hypot(xb - xa, yb - ya))
+            for q in seen[1:-1]
+        )
+        if not steady:
+            continue
+        # with only two sightings nothing confirms the motion, so it has to be large and far beyond the stars' scatter
+        if len(seen) < 3 and (disp[c] < 1.0 * s or disp[c] < 10.0 * scatter):
             continue
         pts = []
         for k, g, fr, x, y, flux, peak in seen:

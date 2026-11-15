@@ -81,3 +81,36 @@ def cone(ra: float, dec: float, size_deg: float) -> list[dict]:
         except httpx.HTTPError as exc:
             last = GaiaError(f"{type(exc).__name__} from {url}")
     raise GaiaError(str(last or "no catalogue mirror answered"))
+
+
+def vizier_near(source: str, columns: str, ra: float, dec: float, radius_arcsec: float) -> list[dict] | None:
+    """Rows of any VizieR catalogue within a small circle, nearest first (None when no mirror answered).
+    Every value is a float where it parses as one. Used for the "was a source already here years ago?" check."""
+    ck = f"viz1/{source}/{ra:.5f}_{dec:.5f}_{radius_arcsec:.1f}"
+    hit = cache.get_json(ck, max_age=30 * 86400)
+    if hit is not None:
+        return hit
+    params = {"-source": source, "-c": f"{ra:.6f} {dec:+.6f}", "-c.rs": f"{radius_arcsec:.1f}", "-out": columns, "-out.add": "_r", "-sort": "_r", "-out.max": "5"}
+    for url in MIRRORS:
+        try:
+            r = httpx.get(url, params=params, timeout=20, follow_redirects=True)
+        except httpx.HTTPError:
+            continue
+        if r.status_code != 200 or "<html" in r.text[:300].lower():
+            continue
+        rows, cols = [], None
+        for line in r.text.splitlines():
+            if not line.strip() or line.startswith("#"):
+                continue
+            cells = line.split("\t")
+            if cols is None:
+                cols = [c.strip() for c in cells]
+                continue
+            if set(line.strip()) <= set("-\t ") or len(cells) < len(cols):
+                continue
+            rec = {c: (_num(v) if _num(v) is not None else v.strip()) for c, v in zip(cols, cells)}
+            if isinstance(rec.get("_r"), float):
+                rows.append(rec)
+        cache.put_json(ck, rows)
+        return rows
+    return None

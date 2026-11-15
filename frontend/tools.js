@@ -133,7 +133,7 @@
       `<svg x="${pad}" y="80" width="${S}" height="${S}" viewBox="0 0 ${n} ${n}" preserveAspectRatio="none"><style>text{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-weight:500;paint-order:stroke;stroke:rgba(0,0,0,.8);stroke-width:${0.7 * u}px}</style>${overlay}</svg>` +
       `<rect x="${pad}" y="80" width="${S}" height="${S}" fill="none" stroke="#40382f"/>` + list +
       `<text x="${S + 2 * pad}" y="96" fill="#aaa294" font-size="13">length = speed · angle = direction · colour = type · thickness = brightness</text>` +
-      `<text x="${pad}" y="${S + 104}" fill="#aaa294" font-size="12">Picture: ${tx(f ? BX.fmtDate(f.date_obs) + " · " + BX.fmtWl(f) : "")}${A && B ? " · compared " + tx(BX.fmtDate(A.date_obs)) + " with " + tx(BX.fmtDate(B.date_obs)) : ""}</text>` +
+      `<text x="${pad}" y="${S + 104}" fill="#aaa294" font-size="12">Picture: ${tx(f ? BX.when(f) + " · " + BX.fmtWl(f) : "")}${A && B ? " · compared " + tx(BX.when(A, true)) + " with " + tx(BX.when(B, true)) : ""}</text>` +
       `<text x="${pad}" y="${S + 122}" fill="#aaa294" font-size="12">${sim ? "Simulated field" : "NASA SPHEREx Level-2 images via NASA/IPAC IRSA"} · made with Blink X · ${tx(location.origin + location.pathname)}</text>` +
       (st.skyCode && st.skyCode.length < 260 ? `<text x="${pad}" y="${S + 140}" fill="#746d61" font-size="10">Sky Code ${tx(st.skyCode)}</text>` : "") + `</svg>`;
   }

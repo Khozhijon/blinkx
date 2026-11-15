@@ -15,7 +15,31 @@ infrared survey, in a browser, on a phone.
   of the whole archive runs on a small free server, <https://blinkx-khofra.onrender.com>, that needs about
   a minute to wake up when nobody has used it for a while)
 - **Data:** real SPHEREx Level-2 spectral images from NASA/IPAC IRSA. Every date shown is the
-  `DATE-OBS` keyword of the FITS file it came from. Nothing is simulated.
+  `DATE-OBS` keyword of the FITS file it came from. The one made-up demo field is labelled
+  SIMULATED on screen.
+
+## Tested on the challenge's five objects
+
+The challenge asks every team to test its tool on five objects. Each is a one-click target on the
+page (saved real pictures, so it opens at once) and can also be typed the way the challenge writes
+it: `Barnard's Star`, `Epsilon Indi B`, `WISE 0855`, `RW Aurigae`, `R Draconis`, or
+`Right Ascension 08h55m10.831s, declination -7d14m42.53s`. This is what Blink X finds by itself:
+
+| Object | What the automatic search reports | Measured here | Catalogue |
+|---|---|---|---|
+| Barnard's Star | Arrow, sliding north; named from SIMBAD | 10.0 ± 1.2″ a year | 10.39″ a year |
+| Epsilon Indi B | Arrow, sliding south-east; named from SIMBAD | 4.6 ± 0.4″ a year | 4.68″ a year |
+| WISE 0855−0714 | Arrow found only after each visit's exposures are added together (it is too faint to follow in single exposures); named from SIMBAD | 8.2 ± 0.6″ a year; 0.24 mJy at 3.9 µm rising to 0.53 mJy at 4.3 µm | 8.15″ a year; about 0.45 mJy at 4.6 µm (WISE) |
+| RW Aurigae | Pulse: brighter at every visit; named from SIMBAD as a young variable star | +59% from Sep 2025 to Sep 2026 at 0.75–1.1 µm | T Tauri variable |
+| R Draconis | No doodle | changes of 10–20% between visits, on a star that overloads the detector | Mira variable, 245-day period |
+
+Two honest notes. WISE 0855 is 7 light-years away, so its seasonal wobble (parallax, 0.45″) is
+part of any measurement made over a single year: the same search in the 4.4–5.0 µm band, where the
+visits are less evenly filled, gives 9.4 ± 0.9″ a year. The Object Card says so. And R Draconis is so bright that
+SPHEREx's detector overloads on it: Blink X measures it against the stars around it, finds a change
+too small to trust, and draws nothing rather than guess. Typing the challenge's printed coordinates
+for WISE 0855 gives its 2010 position; the brown dwarf has since moved 2 arcminutes west, and the
+deep search still finds it there in the 3.8–4.4 µm band.
 
 ![Barnard's Star, 13 months apart, and the difference image](spike/out/spike_barnard.png)
 
@@ -23,13 +47,17 @@ infrared survey, in a browser, on a phone.
 
 | | |
 |---|---|
-| Search | Object name (CDS Sesame: SIMBAD → NED → VizieR) or coordinates in degrees / sexagesimal. Nearby stars are shifted from their year-2000 catalogue position to where they are now, using their catalogued proper motion. |
+| Search | Object name (CDS Sesame: SIMBAD → NED → VizieR, plus everyday names such as `WISE 0855` or `Epsilon Indi B`) or coordinates in degrees or sexagesimal, with or without the words "Right Ascension" and "declination". Coordinates also work in the URL (`?ra=…&dec=…`). Nearby stars are shifted from their year-2000 catalogue position to where they are now, using their catalogued proper motion. |
 | Epochs | All Level-2 spectral images covering the position (IRSA SIA2, collections `spherex_dr1`, `spherex_qr3` and the two `_deep` ones), grouped into visits. SPHEREx returns to most of the sky about every six months. |
 | Cutouts | 3′, 6′, 12′ or 24′ fields, resampled onto one north-up grid so every date lines up pixel for pixel. |
 | Compare | Blink (A ↔ B) with a speed slider, swipe, side by side with a linked cursor, difference (B − A: magenta = new or brighter, green = gone or dimmer), time-lapse with a slider. |
 | Colour band | Any of SPHEREx's six detector bands (0.75–5.0 µm). The exact wavelength of each exposure *at your position* is shown, because SPHEREx's filters vary across the detector. |
 | Display | Brightness, black level, three colour maps, optional brightness matching between dates, smooth or raw pixels. |
-| Examples | Preset targets saved as static files, so the demo still works if the archive is slow or down. |
+| Add exposures together | "Exposures": one at a time, added up per visit, or all added up. The middle value of each pixel is used, so cosmic rays and passing asteroids drop out and the noise falls roughly with the square root of the number of exposures. Every view (blink, swipe, difference, time-lapse) then works on the deep pictures. |
+| Gaia overlay | Stars of ESA's Gaia DR3 catalogue, each drawn where its measured motion puts it on the date of the picture on screen. Fast stars get a line to where they will be in ten years. Pointing at a ring gives the star's brightness, motion and distance. |
+| Spectrum and light curve | Every found object gets its brightness at each wavelength (a spectrum made on the fly from its own exposures), and brightness changers get their brightness at each visit. |
+| Works when NASA's search is down | A record of where all 101,101 SPHEREx pointings looked, built from NASA's open AWS bucket, lets Blink X work out which exposures cover a position without IRSA's search service. Each exposure is still confirmed from its own FITS header. |
+| Examples | Ten targets saved as static files (the challenge's five test objects among them), so the demo still works if the archive is slow or down. |
 | Extras | Labels for known asteroids and comets in the field at that moment (IMCCE SkyBoT); mark suspected movers and copy their coordinates; every view has a shareable link. |
 
 ## Design: "Infrared Observatory"
@@ -108,6 +136,33 @@ and at that distance Kepler's third law allows only a small drift from one year 
 blips that merely line up fail that test. A zigzag seen in only three visits is still worded as a
 weak candidate.
 
+**Deep search.** Slow movers that are too faint to follow in single exposures are looked for in
+the visit stacks: each visit's exposures are added together, the sources of every deep picture are
+matched from visit to visit, what is left of the misalignment is removed using the stars
+themselves, and a source that then shifts by half a SPHEREx pixel or more, and by six times the
+scatter of the ordinary stars, is reported as an arrow. Crowded sources and sources next to a much
+brighter one are left out, because their measured centres wander. This is how WISE 0855 is found.
+The test suite checks it on a made-up field: a source at 4.5 times the noise per exposure is found
+when it moves and not reported when it does not.
+
+**Steady, or not at all.** A deep find must be seen in at least three visits, and every sighting in
+between must sit where a straight, even-paced path from the first to the last puts it. With only
+two visits the shift has to be a full SPHEREx pixel and ten times the stars' scatter. Sources at
+the edge of a detector, where not every exposure covers them, are left out.
+
+**Set aside by an older survey.** A drift of an arcsecond a year or more that no catalogue names is
+checked against NASA's WISE (2010) and ESA's Gaia (2016): if a source already sat on that very
+spot then, nothing travelled there, and the doodle is dropped. The panel says what was dropped and
+why. On one test field this removed an apparent 4.2″-a-year drift that had passed every other test.
+
+**Catalogued but not found.** When SIMBAD lists a star or brown dwarf moving an arcsecond a year or
+more inside the field and no doodle explains it, the panel says so, gives its position and suggests
+what to try (another band, adding the exposures up). Staying silent would be the easier lie.
+
+**Uncertainties.** Arrows carry the uncertainty of their speed, and the Object Card shows it next
+to the catalogue value. Pictures are put on a common brightness scale using the stars they share
+(one vote per star), so a target that really changed is not scaled back to look unchanged.
+
 Views: Blink, **Swipe** (drag a divider), Side by side, **Difference** (magenta = new or brighter,
 green = gone or dimmer), Time-lapse. Shortcuts: `B` `S` `D` `T`, `←`/`→` change the later epoch,
 space pauses. Because the wavelength varies across every SPHEREx exposure, Blink X reads the exact
@@ -137,6 +192,10 @@ differ in colour.
 | Asteroid Vesta on the move | The brightest asteroid moves 6′ in ten hours | 11 exposures, 16–17 Jul 2026, band 2 |
 | Spot the asteroid | (16) Psyche looks like a star until you blink | 8 exposures, 9 Sep 2025, band 3 |
 | Barnard's Star | The fastest star in the sky shifts 11″ in 13 months | 20 exposures, Aug 2025 – Sep 2026, band 2 |
+| Epsilon Indi B | A pair of brown dwarfs 12 light-years away slides 6.6″ in 17 months | 40 exposures, Apr 2025 – Oct 2026, band 2 |
+| WISE 0855 | The coldest brown dwarf known appears when each visit's exposures are added up, and steps west | 48 exposures, May 2025 – May 2026, band 5, added up per visit |
+| RW Aurigae | A young star about 60% brighter a year later | 40 exposures, Sep 2025 – Sep 2026, band 1 |
+| R Draconis | A pulsing red giant that overloads the detector; no doodle, and why | 16 exposures, Jun 2025 – Jun 2026, band 2 |
 | A comet's hidden gas | 3I/ATLAS swells into a cloud at 4.26 µm, where CO₂ glows | 12 exposures, 14 Dec 2025, band 5 |
 | All five doodles (simulated) | A made-up field with a pretend Planet X at 500 au, to show the zigzag | **Simulated, not NASA data** |
 
@@ -216,9 +275,17 @@ FLAGS decoder matches it bit for bit.
   pixel for main-belt asteroids.
 - Names of asteroids and comets cannot be typed into the search box: they have no fixed position.
   Use the examples, or a position and date range you already know.
-- Live search depends on IRSA's query service to say which exposures cover a position. When it is
-  slow or down, Blink X retries, reuses an earlier answer if it has one (and says so), and keeps a
-  small saved index for well-known targets in `seed/`. The saved examples need no archive at all.
+- IRSA's query service is the first choice for saying which exposures cover a position. When it is
+  slow or down, Blink X reuses an earlier answer if it has one (and says so), uses its saved lists
+  for well-known targets (`seed/sia3/`), and otherwise works the list out from its record of where
+  SPHEREx pointed (`seed/pointings.npz`). On 38 positions that record proposed 99.9% of the 14,635
+  exposures IRSA had listed. It is complete up to the day it was built (`scripts/build_pointing_index.py`
+  rebuilds it after a new data release); the saved examples need no archive at all.
+- The deep search needs at least two visits with five or more exposures each, two months or more
+  apart, and six or more stars in common. It finds slow drifts, not objects that appear once.
+- Very bright stars overload the detector. Their positions and brightness are less reliable, and
+  Blink X then says so instead of drawing a doodle.
+- The Gaia overlay is read from the VizieR catalogue service; the saved examples carry their own copy.
 - In SPHEREx's two deep fields (near the ecliptic poles) a spot has tens of thousands of exposures;
   Blink X shows an even sample in time.
 - "Mark a mover" keeps marks on your own device; there is no shared list yet.
@@ -239,12 +306,14 @@ with no backend at all, and live search wakes up in the background.
 ## Repository layout
 
 ```
-backend/     FastAPI app: spherex.py (archive access + image maths), detect.py (change detection),
-             catalogs.py (known-object checks), simulate.py (the simulated demo), resolver.py, skybot.py, cache.py, main.py
+backend/     FastAPI app: spherex.py (archive access + image maths), pointings.py (which exposures cover a position,
+             without IRSA), detect.py (change detection, deep search, spectra), catalogs.py (known-object checks),
+             gaia.py (Gaia DR3 stars), simulate.py (the simulated demo), resolver.py, skybot.py, cache.py, main.py
 frontend/    index.html, style.css (design tokens + components), app.js (viewer), doodles.js (Sky Doodles),
              tools.js (Sky Code, exports, scientist view), landing.js (the sky map), config.js, examples/
-scripts/     build_examples.py, build_seed.py, find_movers.py (finds asteroids/comets that SPHEREx imaged)
-seed/        saved archive search results for well-known targets (fallback when IRSA is down)
+scripts/     build_examples.py, build_seed.py, build_pointing_index.py (reads every pointing from NASA's open bucket),
+             find_movers.py (finds asteroids/comets that SPHEREx imaged)
+seed/        pointings.npz (where every SPHEREx pointing looked) and saved search results for well-known targets
 spike/       the first data experiments and validation scripts
 tests/       offline unit tests
 submission/  project summary, resources list, AI-use note, video script, slide outline
@@ -259,12 +328,18 @@ submission/  project summary, resources list, AI-use note, video script, slide o
 - IRSA SPHEREx archive documentation and cutout tutorial:
   <https://caltech-ipac.github.io/spherex-archive-documentation/> ·
   <https://caltech-ipac.github.io/irsa-tutorials/spherex-cutouts>
-- SPHEREx on the AWS Registry of Open Data (`s3://nasa-irsa-spherex`)
+- SPHEREx on the AWS Registry of Open Data (`s3://nasa-irsa-spherex`): the image files, and the
+  listing from which the pointing index is built
+- **ESA Gaia** Data Release 3 (positions, proper motions, parallaxes, G magnitudes), read from the
+  VizieR catalogue service (CDS, Strasbourg; CfA mirror), catalogue I/355/gaiadr3:
+  <https://www.cosmos.esa.int/web/gaia/dr3> · <https://vizier.cds.unistra.fr/>
 - CDS Sesame name resolver (SIMBAD, NED, VizieR): <https://cds.unistra.fr/cgi-bin/Sesame>
 - IMCCE SkyBoT: <https://ssp.imcce.fr/webservices/skybot/>
 - JPL Horizons (used offline to find which exposures caught the example asteroids/comets):
   <https://ssd.jpl.nasa.gov/horizons/>
 - SIMBAD (CDS; CfA mirror) for proper motions and variable-star types: <https://simbad.cds.unistra.fr/>
+- **NASA WISE** AllWISE source catalogue (positions from 2010), read from VizieR (II/328/allwise), for the
+  "was a source already there?" check: <https://irsa.ipac.caltech.edu/Missions/wise.html>
 - Aladin Lite v3 (CDS, free sky viewer, loaded from jsDelivr): <https://aladin.cds.unistra.fr/AladinLite/>
 - Fonts: Instrument Serif, IBM Plex Sans, IBM Plex Mono (Google Fonts). Icons: Lucide.
 - Software: Python, FastAPI, Astropy, photutils, NumPy, SciPy, httpx, Pillow.

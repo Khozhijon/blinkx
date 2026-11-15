@@ -142,6 +142,8 @@ def build(ex: dict) -> dict:
     # Sky Doodles: automatic change detection on exactly these frames, then catalogue cross-checks
     found = detect.detect(detect.frames_from_encoded(frames, sx.decode_frame), ra, dec, size)
     found["checked"] = catalogs.annotate(found["doodles"], ra, dec, size, predicted=ex.get("predicted"), label=ex.get("object_label"), kind=ex.get("object_kind"))
+    found["dismissed"] = [d["dismissed"] for d in found["doodles"] if d.get("dismissed")]
+    found["doodles"] = [d for d in found["doodles"] if not d.get("dismissed")]
 
     bundle = {
         "slug": ex["slug"],
@@ -163,6 +165,8 @@ def build(ex: dict) -> dict:
         "align": found["align"],
         "detect_stats": found["stats"],
         "checked": found["checked"],
+        "dismissed": found["dismissed"],
+        "expected": catalogs.expected_movers(found["doodles"], ra, dec, size, sum(f["mjd"] for f in frames) / len(frames)),
         "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "NASA/IPAC IRSA SPHEREx Level-2 spectral images (collections spherex_dr1, spherex_qr3)",
     }

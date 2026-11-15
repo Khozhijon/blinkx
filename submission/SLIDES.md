@@ -25,6 +25,8 @@
   brightness). Each has an Object Card: measured speed, direction, catalogue check, a spectrum
   (comet 3I/ATLAS is 65 times brighter at 4.25 µm, where carbon dioxide glows), and the word
   “candidate” for anything unexplained.
+- **Add exposures together** (per visit or all of them) to reach objects too faint for one
+  exposure; lay **ESA Gaia** stars over the picture, each moved to the picture's date.
 - Choose the infrared band and field size, share any view with one **Sky Code**, export JSON,
   CSV, SVG or PNG.
 - Visual: three screenshots from `submission/screens/` — comet with its doodle
@@ -38,8 +40,13 @@
 - Checked against IRSA's own cutout service: dates, wavelengths, pixel values and flags match.
 - Honest display: sky glow removed, flagged pixels repaired from neighbours and shown on request,
   wavelength of every frame stated.
-- Detection measured on real data: comet 3I/ATLAS 175″ per hour, Vesta 37″ per hour, Barnard's
-  Star about 10.0″ per year (catalogue: 10.4). Never called a discovery.
+- **Tested on the challenge's five objects:** Barnard's Star 10.0 ± 1.2″ a year (catalogue 10.39),
+  Epsilon Indi B 4.6 ± 0.4 (4.68), WISE 0855 found only in added-up visits at 8.2 ± 0.6 (8.15),
+  RW Aurigae 59% brighter in a year, R Draconis: overloads the detector, so no claim.
+- Also on real data: comet 3I/ATLAS 175″ per hour with carbon dioxide in its spectrum, Vesta 37″
+  per hour. Never called a discovery.
+- Keeps working when NASA's archive search is down: a record of all 101,101 SPHEREx pointings,
+  built from NASA's open AWS copy, finds 99.9% of the exposures the archive lists.
 - Known objects labelled (JPL Horizons, IMCCE SkyBoT, SIMBAD), so an unlabelled mover stands out.
 - Robust for a live demo: the examples are saved real data, so they open even if the archive is busy.
 - Small diagram: Browser ⇄ FastAPI ⇄ IRSA search / AWS files / CDS names / SkyBoT.
@@ -48,7 +55,6 @@
 - Anyone with a phone can watch a comet from another star cross the sky, or find an asteroid by eye.
 - Classrooms: the Pluto discovery method, hands-on, with this year's NASA data.
 - Researchers: a two-second visual check of any position across SPHEREx epochs.
-- Next: a shared list where citizen scientists flag candidates for astronomers; a “Hunt for
-  Planet X” game; the full 102-colour spectrum of every object; each new SPHEREx release adds
-  another epoch.
+- Next: a shared list where citizen scientists flag candidates for astronomers; the full
+  102-colour spectrum of every object; a WISE overlay; each new SPHEREx release adds another epoch.
 - Close with the URL and the repository link.

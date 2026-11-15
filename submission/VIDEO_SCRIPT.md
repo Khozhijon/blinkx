@@ -14,15 +14,23 @@
 
 ## Script, in the order the guide asks for
 
-About 70 spoken words. Record the screen at 1080p with your own voice over it.
+About 77 spoken words: read it briskly. Record the screen at 1080p with your own voice over it.
 
 | Time | Guide asks for | On screen | Say |
 |---|---|---|---|
 | 0:00–0:03 | Who you are | Landing page: the SPHEREx Milky Way under “The sky moves. Catch it.” Caption: your two names, **Team KhoFra** | “Hi, we're Khozhiakbar and Francia, team KhoFra.” |
-| 0:03–0:07 | The challenge | Drag the **Wavelength** slider: the whole sky changes | “NASA's SPHEREx photographs the whole sky every six months. Our challenge: help anyone see what changed.” |
+| 0:03–0:07 | The challenge | Drag the **Wavelength** slider: the whole sky changes | “NASA's SPHEREx re-photographs the whole sky every six months. Our challenge: show anyone what changed.” |
 | 0:07–0:10 | Project name and tagline | Press **Start hunting**; the comet field is blinking | “This is Blink X. The sky moves: catch it.” |
-| 0:10–0:21 | How it works, with NASA data | Press **T**: comet 3I/ATLAS crosses the grid and its doodle draws in. Click the doodle: the **Object Card**. Then open **A comet's hidden gas** → doodle → scroll to **Spectrum** | “Type any name or coordinates. Blink X lines up real NASA images, finds what moved, measures it, checks the catalogues and reads its spectrum. This interstellar comet glows with carbon dioxide.” |
-| 0:21–0:28 | The future | **Barnard's Star** in **Difference** (magenta and green), then the page URL on screen | “With every new data release, anyone with a phone can hunt for the next comet, brown dwarf, or Planet X.” |
+| 0:10–0:21 | How it works, with NASA data | Press **T**: comet 3I/ATLAS crosses the grid and its doodle draws in. Then tap **WISE 0855** under “NASA's five test objects”: a faint dot in the cross-hair steps sideways as the visits blink. Click its doodle: the **Object Card** (“known: WISEA J0855…”, catalogue 8.15, these images 8.2 ± 0.6) | “Blink X lines up real NASA images, finds what moved and checks the catalogues. Adding exposures together, it even found WISE 0855, the coldest brown dwarf known.” |
+| 0:21–0:28 | The future | **Barnard's Star** in **Difference** (magenta and green), then the page URL on screen | “With each new data release, anyone with a phone can hunt for the next comet, brown dwarf, or Planet X.” |
+
+## Optional swaps
+
+- **Carbon dioxide instead of WISE 0855** (same eleven seconds): target **A comet's hidden gas**,
+  click the doodle, scroll the Object Card to **Spectrum**. “Every object gets a spectrum. This
+  comet from another star is sixty-five times brighter exactly where carbon dioxide glows.”
+- **A changing star** for the last shot: target **RW Aurigae**, click the doodle, scroll to
+  **Brightness at each visit**.
 
 ## Recording tips
 
@@ -43,6 +51,6 @@ About 70 spoken words. Record the screen at 1080p with your own voice over it.
 2. “NASA's SPHEREx re-photographs the whole sky every six months.”
 3. “Blink X: the sky moves. Catch it.”
 4. “Real NASA images, lined up and blinked.” (comet time-lapse)
-5. “Found automatically. Measured. Checked against catalogues.” (Object Card)
-6. “Its spectrum: carbon dioxide from an interstellar comet.” (Spectrum)
+5. “Exposures added together: WISE 0855, the coldest brown dwarf known, appears.” (WISE 0855)
+6. “Found automatically. Measured. Checked against catalogues.” (Object Card)
 7. “Anyone with a phone can hunt for the next comet, brown dwarf, or Planet X.” (URL)

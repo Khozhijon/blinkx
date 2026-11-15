@@ -12,6 +12,14 @@
 | SPHEREx on AWS Open Data (`s3://nasa-irsa-spherex`, the `cloud_access` location given by IRSA) | Partial (HTTP range) reads of the image files. | https://registry.opendata.aws/ |
 | SPHEREx DR1 all-sky data cube, HiPS map at IRSA (102 wavelengths) | The zoomable landing view of the whole infrared sky, with a wavelength slider. | https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube |
 | JPL Horizons | Ephemerides used offline to find which SPHEREx exposures caught the example asteroids and comets. | https://ssd.jpl.nasa.gov/horizons/ |
+| NASA WISE, AllWISE source catalogue (2010 positions), read from VizieR (II/328/allwise) | The "was a source already there?" check: an apparent fast mover is dropped if WISE saw a source on that very spot in 2010. | https://irsa.ipac.caltech.edu/Missions/wise.html |
+| SPHEREx bucket listing and file headers (`s3://nasa-irsa-spherex`) | One header read for each of the 101,101 pointings gives where SPHEREx looked; with it the tool finds the exposures of any position when IRSA's search is down. | https://registry.opendata.aws/ |
+
+## Space Agency Partner data
+
+| Resource | Use | Link |
+|---|---|---|
+| ESA Gaia Data Release 3 (positions, proper motions, parallaxes, G magnitudes) | The Gaia overlay: every catalogued star drawn where its measured motion puts it on the date of the picture. Read from VizieR, catalogue I/355/gaiadr3. | https://www.cosmos.esa.int/web/gaia/dr3 |
 
 ## Other data and services
 
@@ -20,6 +28,7 @@
 | CDS Sesame name resolver (SIMBAD, NED, VizieR), Strasbourg | Turns object names into coordinates and proper motions. | https://cds.unistra.fr/cgi-bin/Sesame |
 | Aladin Lite v3, CDS Strasbourg (free, open source) | Draws the zoomable sky map on the landing page. | https://aladin.cds.unistra.fr/AladinLite/ |
 | SIMBAD, CDS (CfA mirror) | Proper motions and variable-star types for the known/candidate check. | https://simbad.cds.unistra.fr/ |
+| VizieR, CDS (CfA mirror) | Serves the Gaia DR3 table for the overlay. | https://vizier.cds.unistra.fr/ |
 | IMCCE SkyBoT, Paris Observatory | Known asteroids and comets inside a field at a given time. | https://ssp.imcce.fr/webservices/skybot/ |
 
 ## Software
@@ -32,5 +41,6 @@ Hosting: Render (backend + page) and, optionally, GitHub Pages for the static pa
 ## Acknowledgement text
 
 This work uses data from SPHEREx, a NASA mission managed by JPL/Caltech, obtained from the
-NASA/IPAC Infrared Science Archive. It has made use of the SIMBAD database and the Sesame service
-(CDS, Strasbourg, France) and of the SkyBoT service (IMCCE, Observatoire de Paris).
+NASA/IPAC Infrared Science Archive. It has made use of the SIMBAD database, the VizieR catalogue
+access tool and the Sesame service (CDS, Strasbourg, France), of data from the European Space
+Agency (ESA) mission Gaia, and of the SkyBoT service (IMCCE, Observatoire de Paris).

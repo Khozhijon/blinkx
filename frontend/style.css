@@ -374,6 +374,8 @@ body.sci .sci-only { display: block !important; } body.sci .sci-inline { display
 .card-facts dt, .card-facts dd { padding: 7px 0; border-top: 1px solid var(--rule); margin: 0; }
 .card-facts dt { color: var(--bone-3); letter-spacing: .1em; text-transform: uppercase; font-size: 10px; padding-top: 9px; }
 .card-facts dd { overflow-wrap: anywhere; } .card-facts dd .muted { font-family: var(--f-body); }
+.doodle-expected { font-size: 13px; line-height: 1.55; color: var(--bone-2); border-left: 2px solid var(--rule-2); padding: 8px 0 8px 12px; margin: var(--s3) 0; } .doodle-expected strong { color: var(--bone); font-weight: 500; }
+.linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--bone); text-decoration: underline; text-decoration-color: var(--ir); text-underline-offset: 3px; cursor: pointer; } .linklike:hover { color: var(--ir); }
 .spectrum { padding-top: var(--s2); padding-bottom: var(--s4); }
 .spectrum h3 { font: 500 10px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--bone-3); margin: 0 0 10px; padding-top: 12px; border-top: 1px solid var(--rule); }
 .spectrum svg { display: block; width: 100%; height: auto; overflow: visible; }

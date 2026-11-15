@@ -304,3 +304,28 @@ def test_gaia_table_is_parsed():
     assert len(rows) == 2 and rows[0]["id"] == "4472832130942575872"
     assert rows[0]["pmdec"] == pytest.approx(10362.394) and rows[0]["plx"] == pytest.approx(546.9759) and rows[0]["g"] == pytest.approx(8.193974)
     assert rows[1]["pmra"] is None and rows[1]["plx"] is None and rows[1]["dec"] == pytest.approx(4.79629141602)
+
+
+def test_a_drift_is_set_aside_when_an_older_survey_saw_a_source_on_the_spot(monkeypatch):
+    from backend import catalogs, gaia
+
+    doodle = {"id": "ARW-001", "type": "arrow", "motion": {"rate_arcsec_per_year": 4.2}, "points": [{"ra": 10.0909, "dec": 20.0779, "t": 61000.0}]}
+    asked = []
+
+    def fake(source, columns, ra, dec, radius):
+        asked.append(source)
+        return [{"_r": 0.5, "W1mag": 15.3}] if "allwise" in source else []
+
+    monkeypatch.setattr(gaia, "vizier_near", fake)
+    there = catalogs.already_there(doodle)
+    assert there["survey"] == "WISE" and there["year"] == 2010 and there["sep_arcsec"] == 0.5
+    # nothing on the spot in either survey: the drift stands
+    monkeypatch.setattr(gaia, "vizier_near", lambda *a: [])
+    assert catalogs.already_there(doodle) is None
+    # a Gaia star that itself moves that fast is the object, not a contradiction
+    monkeypatch.setattr(gaia, "vizier_near", lambda source, *a: [] if "allwise" in source else [{"_r": 1.0, "pmRA": -800.0, "pmDE": 10360.0}])
+    fast = dict(doodle, motion={"rate_arcsec_per_year": 10.0})
+    assert catalogs.already_there(fast) is None
+    # the catalogue service is down: no verdict, the doodle is kept as a candidate
+    monkeypatch.setattr(gaia, "vizier_near", lambda *a: None)
+    assert catalogs.already_there(doodle) is None
