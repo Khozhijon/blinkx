@@ -163,7 +163,7 @@ def _sia_all(ra: float, dec: float, detector: int | None = None) -> dict:
         params.append(("BAND", f"{lo}e-6 {hi}e-6"))  # metres
     try:
         # IRSA sometimes answers a burst of instant "502 Proxy Error"s; wait a little between tries.
-        r = _get(SIA_URL, params=params, tries=4, timeout=100.0, backoff=2.0)
+        r = _get(SIA_URL, params=params, tries=3, timeout=60.0, backoff=2.0)
     except ArchiveError as exc:
         raise ArchiveError(f"IRSA image search failed: {exc}") from exc
     truncated = b'name="QUERY_STATUS" value="OVERFLOW"' in r.content

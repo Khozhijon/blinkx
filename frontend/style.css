@@ -203,6 +203,9 @@ label { font-size: .86rem; color: var(--muted); display: grid; gap: 4px; }
   .ab { grid-template-columns: 1fr; }
   .ab #swapBtn { justify-self: center; transform: rotate(90deg); }
   .tabs button { font-size: .86rem; }
+  /* phones: examples in one swipeable row, so the picture is not pushed far down */
+  .chips { display: flex; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 6px; margin-right: -16px; padding-right: 16px; }
+  .chip { flex: 0 0 62%; scroll-snap-align: start; }
   /* phones: picture first, colour-band and field pickers after the A/B pickers */
   .viewer-head { display: contents; }
   .selectors { order: 1; }

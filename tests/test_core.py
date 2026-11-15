@@ -154,3 +154,27 @@ def test_sia_votable_light_parser():
     assert rows[0]["obs_collection"] == "spherex_qr3" and rows[1]["obs_collection"] == ""
     with pytest.raises(sx.ArchiveError):
         sx.parse_sia_votable(b'<VOTABLE><INFO name="QUERY_STATUS" value="ERROR">bad</INFO></VOTABLE>')
+
+
+def test_search_falls_back_to_saved_result_when_irsa_is_down(tmp_path, monkeypatch):
+    from backend import cache
+
+    monkeypatch.setattr(cache, "CACHE_DIR", tmp_path / "cache")
+    monkeypatch.setattr(cache, "SEED_DIR", tmp_path / "seed")
+    rows = [{"id": "aD2", "obs_id": "a", "detector": 2, "collection": "spherex_dr1", "key": "dr1/a.fits", "mjd": 60900.0, "exptime": 113.6}]
+    cache.put_seed("sia3/10.00000_20.00000", {"exposures": rows, "truncated": False})
+
+    def down(*args, **kwargs):
+        raise sx.ArchiveError("simulated outage")
+
+    monkeypatch.setattr(sx, "_sia_all", down)
+    res = sx.search(10.0, 20.0)
+    assert res["stale"] is True and res["exposures"] == rows
+    assert sx.band_exposures(10.0, 20.0, 2)["stale"] is True
+    with pytest.raises(sx.ArchiveError):
+        sx.search(11.0, 20.0)  # nothing saved for this spot: the error must surface
+
+    # when IRSA answers, the fresh result is used and cached
+    monkeypatch.setattr(sx, "_sia_all", lambda ra, dec, detector=None: {"exposures": rows * 1, "truncated": False})
+    res = sx.search(11.0, 20.0)
+    assert "stale" not in res and cache.get_json("sia3/11.00000_20.00000") is not None

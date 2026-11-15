@@ -2,7 +2,7 @@
 
 Live search needs IRSA's query service to say which exposures cover a position; the pixels then
 come from AWS. When IRSA is not answering, the backend falls back to these saved lists, so popular
-targets keep working. Run again any time to refresh:  python scripts/build_seed.py
+targets keep working. Run again any time to refresh:  python scripts/build_seed.py [--refresh]
 """
 from __future__ import annotations
 
@@ -25,12 +25,16 @@ TARGETS = [
 
 
 def main() -> None:
-    names = sys.argv[1:] or TARGETS
+    names = [a for a in sys.argv[1:] if not a.startswith("--")] or TARGETS
     ok = 0
     for name in names:
         try:
             pos = resolver.resolve(name)
             ra, dec = round(pos["ra"], 5), round(pos["dec"], 5)
+            if "--refresh" not in sys.argv and cache._path(f"sia3/{ra:.5f}_{dec:.5f}", "json", cache.SEED_DIR).is_file():
+                ok += 1
+                print(f"{name:20s} already seeded", flush=True)
+                continue
             res = None
             for attempt in range(6):  # IRSA can be flaky; be patient here, nobody is waiting
                 try:
@@ -47,7 +51,7 @@ def main() -> None:
             cache.put_seed(f"sia3/{ra:.5f}_{dec:.5f}", res)
             cache.put_json(f"sia3/{ra:.5f}_{dec:.5f}", res)
             ok += 1
-            print(f"{name:20s} RA {ra:9.5f} Dec {dec:+9.5f}  {len(res['exposures']):4d} exposures")
+            print(f"{name:20s} RA {ra:9.5f} Dec {dec:+9.5f}  {len(res['exposures']):4d} exposures", flush=True)
         except Exception as exc:  # noqa: BLE001
             print(f"{name:20s} failed: {exc}")
     print(f"seeded {ok} of {len(names)} targets into {cache.SEED_DIR}")
