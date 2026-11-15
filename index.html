@@ -22,6 +22,18 @@
   </header>
 
   <main>
+    <section id="intro" class="intro" aria-label="How it works">
+      <div class="intro-full">
+        <ol class="steps">
+          <li><button type="button" id="step1"><span class="num">1</span><strong>Pick a patch of sky</strong><span>Type a star or galaxy, or tap an example.</span></button></li>
+          <li><button type="button" id="step2"><span class="num">2</span><strong>Watch it change</strong><span>Blink, swipe or subtract real NASA pictures taken at different times.</span></button></li>
+          <li><button type="button" id="step3"><span class="num">3</span><strong>Read the doodle</strong><span>Everything that moved or changed becomes a simple drawing you can share.</span></button></li>
+        </ol>
+        <button id="introClose" class="btn ghost" type="button">Got it</button>
+      </div>
+      <button id="introOpen" class="intro-link" type="button">How it works: pick a patch of sky → watch it change → read the doodle</button>
+    </section>
+
     <section class="card search" aria-label="Choose a place in the sky">
       <form id="searchForm" autocomplete="off">
         <label for="q">Where in the sky?</label>
@@ -64,10 +76,11 @@
       <p id="story" class="story" hidden></p>
 
       <div class="tabs" role="tablist" aria-label="How to compare">
-        <button role="tab" data-mode="blink" aria-selected="true">Blink</button>
+        <button role="tab" data-mode="blink" aria-selected="true" title="Shortcut: B">Blink</button>
+        <button role="tab" data-mode="swipe" aria-selected="false" title="Shortcut: S">Swipe</button>
         <button role="tab" data-mode="side" aria-selected="false">Side by side</button>
-        <button role="tab" data-mode="diff" aria-selected="false">Difference</button>
-        <button role="tab" data-mode="time" aria-selected="false">Time-lapse</button>
+        <button role="tab" data-mode="diff" aria-selected="false" title="Shortcut: D">Difference</button>
+        <button role="tab" data-mode="time" aria-selected="false" title="Shortcut: T">Time-lapse</button>
       </div>
       <p id="modeHint" class="mode-hint"></p>
 
@@ -106,6 +119,30 @@
         </label>
       </div>
       <p id="gap" class="gap muted"></p>
+      <p id="colourMatch" class="colour-match" hidden>
+        <span class="cm-text"></span>
+        <button type="button" class="tip" aria-label="Why colour matters" data-tip="SPHEREx sees a slightly different infrared colour (wavelength) at every spot of each exposure. Two pictures of the same place are fair to compare only when their colours are close, so Blink X reads the exact wavelength at your position from each image file and pairs the closest ones. Stars shine differently in different colours, so a mismatch can fake a brightness change.">?</button>
+        <button id="matchBtn" class="btn ghost small" type="button" hidden>Use the closest colour</button>
+      </p>
+
+      <section id="doodlePanel" class="doodle-panel card" aria-label="Sky Doodles">
+        <div class="panel-head">
+          <h2>Sky Doodles <span id="doodleCount" class="muted"></span>
+            <button type="button" class="tip" aria-label="What is a Sky Doodle?" data-tip="Blink X compares every exposure of this patch of sky, finds what moved, changed brightness, appeared or vanished, and draws each one as a simple shape. It then checks catalogues of known asteroids, comets and stars. Anything not in a catalogue is called a candidate, never a discovery.">?</button>
+          </h2>
+          <label class="inline"><input id="showDoodles" type="checkbox" checked> Draw them on the picture</label>
+        </div>
+        <p id="doodleStatus" class="muted" role="status"></p>
+        <div id="doodleList" class="doodle-list"></div>
+        <p id="alignNote" class="align-note muted" hidden>
+          <span class="an-text"></span>
+          <button type="button" class="tip" aria-label="How the pictures are lined up" data-tip="Each exposure comes with its own map of the sky (called a WCS) in the image file. Blink X uses it to redraw every exposure on the same north-up grid. As a second check it compares the star pattern in each exposure with the others; if an exposure turns out to be offset, it is shifted to match the stars and the shift is reported here.">?</button>
+        </p>
+        <details id="legend" class="legend">
+          <summary>How to read a doodle</summary>
+          <div id="legendBody" class="legend-body"></div>
+        </details>
+      </section>
 
       <div class="strip-head">
         <h2>Every SPHEREx exposure of this spot <span id="stripCount" class="muted"></span></h2>
@@ -171,8 +208,12 @@
           <p>Distant stars and galaxies stay put. Things that are close to us — asteroids, comets, the nearest stars — drift across them. Flip quickly between two pictures of the same spot and whatever moved seems to jump. Clyde Tombaugh found Pluto this way in 1930, with two glass photographs and a machine called a blink comparator.</p>
         </div>
         <div>
-          <h3>Four ways to compare</h3>
-          <p><strong>Blink</strong> flips between an earlier picture (A) and a later one (B). <strong>Side by side</strong> shows both at once. <strong>Difference</strong> subtracts A from B: anything new glows <span class="c-b">orange</span>, anything that left turns <span class="c-a">blue</span>, and everything that stayed the same fades to black. <strong>Time-lapse</strong> plays every exposure in order.</p>
+          <h3>Five ways to compare</h3>
+          <p><strong>Blink</strong> flips between an earlier picture (A) and a later one (B). <strong>Side by side</strong> shows both at once. <strong>Swipe</strong> lets you drag a divider between them. <strong>Difference</strong> subtracts A from B: anything new or brighter glows <span class="c-new">magenta</span>, anything gone or dimmer turns <span class="c-gone">green</span>, and everything that stayed the same fades to black. <strong>Time-lapse</strong> plays every exposure in order.</p>
+        </div>
+        <div>
+          <h3>Sky Doodles</h3>
+          <p>Blink X also looks for changes by itself. It finds the stars in every picture, lines them up, and flags anything that moved, changed brightness, appeared or vanished. Each find becomes a doodle: a <strong>spark</strong> for an asteroid, a <strong>comet tail</strong>, an <strong>arrow</strong> for a nearby star, a <strong>pulse</strong> for a star that changes brightness, and a <strong>zigzag</strong> for a very distant world. Known objects are named; the rest are only candidates.</p>
         </div>
         <div>
           <h3>Hunting for Planet X</h3>
@@ -195,8 +236,14 @@
   </footer>
 
   <noscript><p style="padding:16px">Blink X needs JavaScript to draw the SPHEREx images.</p></noscript>
+  <dialog id="card" class="object-card" aria-label="Object card">
+    <button id="cardClose" class="card-close" type="button" aria-label="Close">×</button>
+    <div id="cardBody"></div>
+  </dialog>
+  <div id="tipBubble" class="tip-bubble" role="tooltip" hidden></div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script src="doodles.js"></script>
 </body>
 </html>
