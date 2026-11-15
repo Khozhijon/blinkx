@@ -151,12 +151,15 @@
     if (!st.match || !f || !ref || f === ref || !f.z || !ref.z) return 1;
     const key = f.id + ">" + ref.id;
     if (scaleCache.has(key)) return scaleCache.get(key);
-    const a = ref.z, b = f.z; let sab = 0, sbb = 0, cnt = 0;
+    // Median ratio over pixels that are clearly bright in both: stars that did not move. A median
+    // ignores the mover itself, which is bright in different places in the two pictures.
+    const a = ref.z, b = f.z, ratios = [];
     for (let i = 0; i < a.length; i++) {
       const x = a[i], y = b[i];
-      if (x > 15 && y > 15) { sab += x * y; sbb += y * y; cnt++; }
+      if (x > 15 && y > 15) ratios.push(x / y);
     }
-    const k = cnt >= 12 && sbb > 0 ? clamp(sab / sbb, 0.2, 5) : 1;
+    ratios.sort((p, q) => p - q);
+    const k = ratios.length >= 12 ? clamp(ratios[ratios.length >> 1], 0.2, 5) : 1;
     scaleCache.set(key, k);
     return k;
   }
@@ -203,6 +206,14 @@
     return cv;
   }
 
+  function applySettings(v) {
+    for (const k of Object.keys(DEFAULTS)) if (k in v) st[k] = v[k];
+    $("hi").value = st.hi; $("lo").value = st.lo; $("cmap").value = st.cmap;
+    for (const id of ["match", "smooth", "cross", "known", "showFilled"]) $(id).checked = st[id];
+    $("stage").classList.toggle("crisp", !st.smooth);
+    invalidate(true);
+  }
+
   function invalidate(scales = false) { renderCache = new Map(); if (scales) scaleCache = new Map(); schedule(); }
 
   /* ------------------------------------------------------------------ drawing */
@@ -236,7 +247,9 @@
     if (!st.frames.length || !st.target) return;
     const A = byId(st.a), B = byId(st.b), need = [];
     let cap0 = "", cap1 = "";
-    const label = (f) => f ? `${fmtDate(f.date_obs, false)} · ${fmtWl(f)}` : "";
+    // two pictures from the same day are told apart by their time
+    const sameDay = !!(A && B && A !== B && (A.date_obs || "").slice(0, 10) === (B.date_obs || "").slice(0, 10));
+    const label = (f) => f ? `${fmtDate(f.date_obs, sameDay)} · ${fmtWl(f)}` : "";
     if (st.mode === "side") {
       need.push(A, B);
       if (A && A.z) paint(0, frameCanvas(A, 1)); else blank(0);
@@ -245,7 +258,7 @@
     } else if (st.mode === "diff") {
       need.push(A, B);
       if (A && B && A.z && B.z) paint(0, diffCanvas(A, B)); else blank(0);
-      cap0 = `<span class="tag d">B − A</span>${esc(fmtDate(B && B.date_obs, false))} minus ${esc(fmtDate(A && A.date_obs, false))}`;
+      cap0 = `<span class="tag d">B − A</span>${esc(fmtDate(B && B.date_obs, sameDay))} minus ${esc(fmtDate(A && A.date_obs, sameDay))}`;
     } else if (st.mode === "time") {
       const f = st.frames[st.timeIdx]; need.push(f);
       if (f && f.z) paint(0, frameCanvas(f, scaleFor(f, A && A.z ? A : null))); else blank(0);
@@ -523,7 +536,7 @@
 
   function summarise(search, frames) {
     const v = search.visits || [];
-    const missing = search.failed && search.failed.length ? " Part of the archive didn't answer just now, so some pictures may be missing — try again in a minute." : "";
+    const missing = search.stale ? " (NASA's archive search isn't answering right now, so this list of exposures is one saved earlier; the newest pictures may be missing.)" : "";
     if (search.deep) return "This spot is in one of SPHEREx's two deep fields, which it photographs almost every day — tens of thousands of exposures. Showing an even sample over time." + missing;
     const span = v.length ? `${monthYear(v[0].start)} – ${monthYear(v[v.length - 1].end)}` : "";
     let s = `SPHEREx has photographed this spot ${search.total.toLocaleString()} times in ${v.length} visit${v.length === 1 ? "" : "s"}${span ? ` (${span})` : ""}.`;
@@ -577,7 +590,14 @@
     $("story").hidden = true;
     try {
       setStatus("Searching the SPHEREx archive for pictures of this spot…");
-      const search = await api("/api/search", { ra: target.ra, dec: target.dec });
+      const slow = setTimeout(() => {
+        if (token !== st.token) return;
+        setStatus("Still searching — NASA's archive is answering slowly right now. This can take up to a minute.");
+        $("loadText").textContent = "Still searching — the archive is slow right now…";
+      }, 7000);
+      let search;
+      try { search = await getJson(`${API}/api/search?${new URLSearchParams({ ra: target.ra, dec: target.dec })}`, 240000); }
+      finally { clearTimeout(slow); }
       if (token !== st.token) return;
       st.search = search;
       if (!search.total) {
@@ -590,7 +610,7 @@
       fillBandSelect(search);
       st.summary = summarise(search);
       setStatus(`${st.summary} Reading dates and colours…`);
-      const res = await api("/api/frames", { ra: target.ra, dec: target.dec, band: st.band });
+      const res = await getJson(`${API}/api/frames?${new URLSearchParams({ ra: target.ra, dec: target.dec, band: st.band })}`, 240000);
       if (token !== st.token) return;
       st.totalInBand = res.total_in_band || res.frames.length;
       if (!res.frames.length) { $("load0").hidden = true; setStatus(`${st.summary} None of them in this colour band — choose another band.`, true); return; }
@@ -620,7 +640,8 @@
     st.summary = summarise(ex.search);
     $("story").hidden = !ex.story; $("story").textContent = ex.story || "";
     const frames = ex.frames.map((f) => decodeFrame({ ...f }));
-    if (ex.known_default !== undefined) { st.known = !!ex.known_default; $("known").checked = st.known; }
+    // an example may ask for particular display settings (e.g. no crosshair in the "spot it" game)
+    applySettings({ ...DEFAULTS, known: !!ex.known_default, ...(ex.settings || {}) });
     adoptFrames(frames, { a: opts.a || ex.a, b: opts.b || ex.b, mode: opts.mode || ex.mode });
     setPlaying(true);
     setStatus(st.summary + " (Example saved from the archive, so it opens instantly.)");
@@ -699,12 +720,7 @@
     $("cmap").addEventListener("change", (e) => { st.cmap = e.target.value; invalidate(); });
     for (const id of ["match", "cross", "known", "showFilled"]) $(id).addEventListener("change", (e) => { st[id] = e.target.checked; invalidate(id === "match"); });
     $("smooth").addEventListener("change", (e) => { st.smooth = e.target.checked; $("stage").classList.toggle("crisp", !st.smooth); });
-    $("resetBtn").addEventListener("click", () => {
-      Object.assign(st, DEFAULTS);
-      $("hi").value = st.hi; $("lo").value = st.lo; $("cmap").value = st.cmap;
-      for (const id of ["match", "smooth", "cross", "known", "showFilled"]) $(id).checked = st[id];
-      $("stage").classList.remove("crisp"); invalidate(true);
-    });
+    $("resetBtn").addEventListener("click", () => applySettings(DEFAULTS));
     $("shareBtn").addEventListener("click", async () => {
       const url = shareUrl();
       try { await navigator.clipboard.writeText(url); toast("Link copied — anyone who opens it sees this exact view."); }
