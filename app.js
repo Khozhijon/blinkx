@@ -14,7 +14,7 @@
   const NODATA = [20, 26, 43];
   const COL_NEW = [255, 64, 200], COL_GONE = [52, 214, 112];   // difference view: magenta = new/brighter, green = gone/dimmer
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const DEFAULTS = { hi: 50, lo: 30, cmap: "gray", match: true, smooth: true, cross: true, known: false, showFilled: false };
+  const DEFAULTS = { hi: 50, lo: 30, cmap: "gray", match: true, smooth: true, cross: true, known: false, gaia: false, showFilled: false };
 
   const st = {
     token: 0, target: null, example: null, search: null,
@@ -22,7 +22,7 @@
     mode: "blink", playing: true, phase: 0, timeIdx: 0, speed: 55, arm: "b",
     marking: false, marks: [], knownCache: new Map(), hover: null,
     split: 0.5, doodles: [], align: {}, checked: null, doodleState: "idle", showDoodles: true, pickedDoodle: null,
-    depth: "single", singles: [], stackWait: false,      // single exposures, or exposures added together per visit / all of them
+    depth: "single", singles: [], stackWait: false, gaiaStars: null, gaiaState: "idle",      // single exposures, or exposures added together per visit / all of them
     ...DEFAULTS,
   };
   // Shared with doodles.js (Sky Doodles, Object Cards, exports): state, helpers and a few hooks.
@@ -50,7 +50,7 @@
     return withTime ? `${d}, ${m[4]}:${m[5]} UTC` : d;
   }
   const monthYear = (iso) => { const m = /^(\d{4})-(\d\d)/.exec(iso || ""); return m ? `${MONTHS[+m[2] - 1]} ${m[1]}` : "?"; };
-  const fmtWl = (f) => f.stack && f.stack.wl ? `${f.stack.wl[0].toFixed(2)}–${f.stack.wl[1].toFixed(2)} µm` : f.wavelength_um ? `${f.wavelength_um.toFixed(2)} µm` : "";
+  const fmtWl = (f) => f.stack && f.stack.wl && f.stack.wl[0].toFixed(2) !== f.stack.wl[1].toFixed(2) ? `${f.stack.wl[0].toFixed(2)}–${f.stack.wl[1].toFixed(2)} µm` : f.wavelength_um ? `${f.wavelength_um.toFixed(2)} µm` : "";
 
   function fmtSexa(ra, dec) {
     const h = ra / 15, hh = Math.floor(h), mm = Math.floor((h - hh) * 60), ss = ((h - hh) * 60 - mm) * 60;
@@ -76,7 +76,7 @@
     return x.y === y.y ? `${x.d} ${x.mo} – ${y.d} ${y.mo} ${y.y}` : `${x.d} ${x.mo} ${x.y} – ${y.d} ${y.mo} ${y.y}`;
   }
   /** When a picture was taken: one time for a single exposure, a span of days for exposures added together. */
-  const when = (f) => !f ? "" : f.stack ? `${f.stack.count} exposures added · ${spanOf(f.stack.first, f.stack.last)}` : stamp(f.date_obs);
+  const when = (f, short) => !f ? "" : f.stack ? `${f.stack.count === 1 ? "1 exposure" : f.stack.count + (short ? " added" : " exposures added")} · ${spanOf(f.stack.first, f.stack.last)}` : stamp(f.date_obs);
   function fmtGap(days) {
     const d = Math.abs(days);
     if (d < 1 / 24) return `${Math.round(d * 1440)} minutes`;
@@ -174,12 +174,19 @@
     if (!st.match || !f || !ref || f === ref || !f.z || !ref.z) return 1;
     const key = f.id + ">" + ref.id;
     if (scaleCache.has(key)) return scaleCache.get(key);
-    // Median ratio over pixels that are clearly bright in both: stars that did not move. A median
-    // ignores the mover itself, which is bright in different places in the two pictures.
-    const a = ref.z, b = f.z, ratios = [];
+    // Best: the brightness of the stars the two exposures share, measured by the change detection (one vote per star).
+    const sa = st.align[ref.id], sb = st.align[f.id];
+    if (sa && sb && sa.scale && sb.scale && ref.sigma && f.sigma) {
+      const k = clamp((f.sigma * sa.scale) / (ref.sigma * sb.scale), 0.2, 5);
+      scaleCache.set(key, k);
+      return k;
+    }
+    // Otherwise: the median ratio over pixels that are clearly bright in both pictures, leaving out the middle of the
+    // field, so that a target which itself changed brightness is not scaled back to look unchanged.
+    const a = ref.z, b = f.z, ratios = [], n = f.n, c = (n - 1) / 2, r2 = Math.pow(3 * 6.15 / (st.size * 3600 / n), 2);
     for (let i = 0; i < a.length; i++) {
       const x = a[i], y = b[i];
-      if (x > 15 && y > 15) ratios.push(x / y);
+      if (x > 15 && y > 15) { const dx = (i % n) - c, dy = ((i / n) | 0) - c; if (dx * dx + dy * dy > r2) ratios.push(x / y); }
     }
     ratios.sort((p, q) => p - q);
     const k = ratios.length >= 12 ? clamp(ratios[ratios.length >> 1], 0.2, 5) : 1;
@@ -232,7 +239,7 @@
   function applySettings(v) {
     for (const k of Object.keys(DEFAULTS)) if (k in v) st[k] = v[k];
     $("hi").value = st.hi; $("lo").value = st.lo; $("cmap").value = st.cmap;
-    for (const id of ["match", "smooth", "cross", "known", "showFilled"]) $(id).checked = st[id];
+    for (const id of ["match", "smooth", "cross", "known", "gaia", "showFilled"]) $(id).checked = st[id];
     $("stage").classList.toggle("crisp", !st.smooth);
     invalidate(true);
   }
@@ -290,7 +297,8 @@
     let cap0 = "", cap1 = "";
     // two pictures from the same day are told apart by their time
     const sameDay = !!(A && B && A !== B && (A.date_obs || "").slice(0, 10) === (B.date_obs || "").slice(0, 10));
-    const label = (f) => f ? `${when(f)}  ·  ${fmtWl(f)}` : "";
+    const two = st.mode === "side" || st.mode === "swipe";       // two captions share the width: keep them short
+    const label = (f) => f ? `${when(f, two)}  ·  ${fmtWl(f)}` : "";
     if (st.mode === "side") {
       need.push(A, B);
       if (A && A.z) paint(0, frameCanvas(A, 1), A); else blank(0);
@@ -381,6 +389,21 @@
           `<text x="${i + 0.5}" y="${j + 0.5 - 7 * u}" text-anchor="middle" fill="#efe9dd" style="font-size:${fs}px">${esc(name)}</text>`;
       }
     }
+    // Gaia stars (ESA), each moved to where its catalogued motion puts it on the date of this picture
+    if (st.gaia && f) {
+      const stars = gaiaStars();
+      if (stars) for (const g of stars) {
+        const [ra, dec] = gaiaAt(g, f.mjd), [i, j] = skyToPix(ra, dec);
+        if (i < 0 || j < 0 || i > n - 1 || j > n - 1) continue;
+        const pm = Math.hypot(g.pmra || 0, g.pmdec || 0) / 1000, fast = pm >= 0.2;          // arcseconds a year
+        s += `<circle cx="${(i + 0.5).toFixed(2)}" cy="${(j + 0.5).toFixed(2)}" r="${(fast ? 2.4 : 1.7) * u}" fill="none" stroke="${bone}" stroke-opacity="${fast ? 0.95 : 0.55}" stroke-width="${hair * (fast ? 2 : 1.4)}"${fast ? "" : ` stroke-dasharray="${0.6 * u} ${0.6 * u}"`}/>`;
+        if (fast) {                                              // a fast star: a dashed line to where Gaia puts it ten years on
+          const [ra2, dec2] = gaiaAt(g, f.mjd + 3652.5), [i2, j2] = skyToPix(ra2, dec2);
+          s += `<line x1="${(i + 0.5).toFixed(2)}" y1="${(j + 0.5).toFixed(2)}" x2="${(i2 + 0.5).toFixed(2)}" y2="${(j2 + 0.5).toFixed(2)}" stroke="${bone}" stroke-opacity=".9" stroke-width="${hair * 1.6}" stroke-dasharray="${0.9 * u} ${0.7 * u}"/>` +
+            `<text x="${(i + 0.5 + 3.4 * u).toFixed(1)}" y="${(j + 0.5 + 4.6 * u).toFixed(1)}" fill="${bone}" style="font-size:${lf}px">Gaia: ${pm.toFixed(2)}″/yr</text>`;
+        }
+      }
+    }
     st.marks.forEach((m, k) => {
       const [i, j] = skyToPix(m.ra, m.dec), r = 4 * u;
       if (i < 0 || j < 0 || i > n - 1 || j > n - 1) return;
@@ -398,6 +421,33 @@
     }
     if (BX.hooks.overlay) s += BX.hooks.overlay(pane, f, u, n) || "";
     svg.innerHTML = s;
+  }
+
+  /* ------------------------------------------------------------------ Gaia stars (ESA's star-mapping mission) */
+  function gaiaStars() {
+    if (st.gaiaStars || st.gaiaState !== "idle") return st.gaiaStars;
+    if (st.example && st.example.simulated) { st.gaiaStars = []; return st.gaiaStars; }      // a made-up field has no real stars
+    if (st.example && st.example.gaia && st.example.size === st.size) { st.gaiaStars = st.example.gaia; return st.gaiaStars; }
+    st.gaiaState = "loading"; const token = st.token;
+    api("/api/gaia", { ra: st.target.ra, dec: st.target.dec, size: st.size })
+      .then((j) => { if (token === st.token) { st.gaiaStars = j.stars || []; st.gaiaState = "done"; schedule(); } })
+      .catch(() => { if (token === st.token) { st.gaiaState = "idle"; st.gaia = false; $("gaia").checked = false; toast("The Gaia star catalogue didn't answer just now. Try again in a moment."); } });
+    return null;
+  }
+  /** Where Gaia puts a star on a given date: its catalogue position is for 2016.0, and it lists the yearly motion. */
+  function gaiaAt(g, mjd) {
+    const yr = (mjd - 57388.0) / 365.25;
+    return [g.ra + (g.pmra || 0) * yr / 3.6e6 / Math.cos(rad(g.dec)), g.dec + (g.pmdec || 0) * yr / 3.6e6];
+  }
+  /** The Gaia star under the pointer, in words. */
+  function gaiaNear(x, y, f) {
+    if (!st.gaia || !st.gaiaStars || !f) return "";
+    let best = null, bd = 2.6 * unit();
+    for (const g of st.gaiaStars) { const [ra, dec] = gaiaAt(g, f.mjd), [i, j] = skyToPix(ra, dec), d = Math.hypot(i + 0.5 - x, j + 0.5 - y); if (d < bd) { bd = d; best = g; } }
+    if (!best) return "";
+    const pm = Math.hypot(best.pmra || 0, best.pmdec || 0) / 1000;
+    return ` · Gaia star${best.g != null ? `, G magnitude ${best.g.toFixed(1)}` : ""}` + (best.pmra != null ? `, moving ${pm.toFixed(pm < 0.1 ? 3 : 2)}″ a year` : "") +
+      (best.plx > 2 ? `, about ${(3261.6 / best.plx).toFixed(best.plx > 100 ? 1 : 0)} light-years away` : "");
   }
 
   /* ------------------------------------------------------------------ known objects (SkyBoT) */
@@ -436,7 +486,7 @@
         const b = document.createElement("button"); b.type = "button"; b.className = "thumb pending"; b.dataset.id = f.id;
         b.title = `${f.stack ? when(f) : fmtDate(f.date_obs)} — ${fmtWl(f)}`;
         const d = /^\d{4}-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(f.date_obs || "");
-        b.innerHTML = `<canvas width="66" height="66"></canvas><small>${f.stack ? `${f.stack.count} added` : d ? `${+d[2]} ${MONTHS[+d[1] - 1]} ${d[3]}:${d[4]}` : ""}<br>${esc(fmtWl(f))}</small>`;
+        b.innerHTML = `<canvas width="66" height="66"></canvas><small>${f.stack ? (f.stack.count === 1 ? "1 exposure" : `${f.stack.count} added`) : d ? `${+d[2]} ${MONTHS[+d[1] - 1]} ${d[3]}:${d[4]}` : ""}<br>${esc(fmtWl(f))}</small>`;
         b.addEventListener("click", () => pickFrame(f.id));
         g.appendChild(b);
       }
@@ -499,7 +549,7 @@
   function updateGap() {
     const A = byId(st.a), B = byId(st.b), el = $("gap");
     if (!A || !B) { el.textContent = ""; return; }
-    if (A === B) { el.textContent = A.stack && st.frames.length === 1 ? "Every exposure is added into this one deep picture. Choose “Added up, each visit” to compare dates." : "A and B are the same picture — choose two different ones to compare."; return; }
+    if (A === B) { el.textContent = A.stack && st.frames.length === 1 ? "Every exposure is added into this one deep picture. Choose “Added up per visit” to compare dates." : "A and B are the same picture — choose two different ones to compare."; return; }
     const dt = B.mjd - A.mjd;
     el.textContent = `B was taken ${fmtGap(dt)} ${dt >= 0 ? "after" : "before"} A.`;
     updateColourMatch(A, B);
@@ -530,10 +580,10 @@
   function factCard(f, cls, title) {
     if (!f) return "";
     if (f.stack) return `<div class="fact ${cls}"><h3>${esc(title)}</h3><dl>` +
-      `<dt>Made from</dt><dd>${f.stack.count} exposures added together <span class="muted">(${f.stack.count >= 3 ? "the middle value of each pixel, so cosmic-ray hits and passing asteroids drop out" : "the average of each pixel"})</span></dd>` +
+      `<dt>Made from</dt><dd>${f.stack.count === 1 ? "1 exposure (the only one in this visit)" : f.stack.count + " exposures added together"} <span class="muted">${f.stack.count >= 3 ? "(the middle value of each pixel, so cosmic-ray hits and passing asteroids drop out)" : f.stack.count === 2 ? "(the average of each pixel)" : ""}</span></dd>` +
       `<dt>Taken</dt><dd>${esc(spanOf(f.stack.first, f.stack.last))} <span class="muted">(first to last DATE-OBS)</span></dd>` +
       `<dt>Colour</dt><dd>${esc(fmtWl(f))} infrared · band ${f.detector}</dd>` +
-      `<dt>Depth</dt><dd>noise about ${f.stack.gain.toFixed(1)}× lower than in one exposure</dd></dl></div>`;
+      (f.stack.count > 1 ? `<dt>Depth</dt><dd>noise about ${f.stack.gain.toFixed(1)}× lower than in one exposure</dd>` : "") + `</dl></div>`;
     return `<div class="fact ${cls}"><h3>${esc(title)}</h3><dl>` +
       `<dt>Taken</dt><dd>${esc(fmtDate(f.date_obs))} <span class="muted">(DATE-OBS in the image file)</span></dd>` +
       `<dt>Colour</dt><dd>${f.wavelength_um ? f.wavelength_um.toFixed(3) + " µm" : "?"} infrared · band ${f.detector}</dd>` +
@@ -686,6 +736,7 @@
   function resetView(target, opts) {
     st.token++; queue = []; renderCache = new Map(); scaleCache = new Map(); st.knownCache = new Map();
     st.target = target; st.frames = []; st.a = st.b = null; st.phase = 0; st.timeIdx = 0; st.hover = null;
+    st.gaiaStars = null; st.gaiaState = "idle";
     st.singles = []; st.stackWait = false; st.depth = opts.depth === "visit" || opts.depth === "all" ? opts.depth : "single"; $("depth").value = st.depth;
     st.band = +opts.band || 2; st.size = +opts.size || 0.1; st.n = gridSize(st.size);
     st.marks = loadMarks();
@@ -814,7 +865,7 @@
     let ex;
     try { ex = await getJson(`examples/${slug}.json`); } catch (e) { setStatus("Couldn't open that example. " + e.message, true); return; }
     st.example = ex;
-    const token = resetView(ex.target, { band: ex.band, size: ex.size, depth: opts.depth });
+    const token = resetView(ex.target, { band: ex.band, size: ex.size, depth: opts.depth || ex.depth });
     if (token !== st.token) return;
     st.search = ex.search; st.totalInBand = ex.total_in_band || ex.frames.length;
     fillBandSelect(ex.search);
@@ -838,6 +889,9 @@
     setStatus(`Looking up “${q}”…`);
     try {
       const t = await api("/api/resolve", { q });
+      // a typed name that is one of the saved targets opens the saved view: same real pictures, already chosen and checked
+      const near = t.kind === "name" && examples.find((e) => !e.simulated && e.ra != null && Math.hypot((e.ra - t.ra) * Math.cos(rad(t.dec)), e.dec - t.dec) * 3600 < 30);
+      if (near) { await loadExample(near.slug); $("viewer").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
       await loadLive({ ...t, name: t.name || `RA ${t.ra.toFixed(4)}°, Dec ${t.dec >= 0 ? "+" : ""}${t.dec.toFixed(4)}°` }, { band: 2, size: st.size, mode: st.mode });
     } catch (e) { setStatus(e.message, true); }
   }
@@ -935,7 +989,7 @@
     $("hi").addEventListener("input", (e) => { st.hi = +e.target.value; invalidate(); });
     $("lo").addEventListener("input", (e) => { st.lo = +e.target.value; invalidate(); });
     $("cmap").addEventListener("change", (e) => { st.cmap = e.target.value; invalidate(); });
-    for (const id of ["match", "cross", "known", "showFilled"]) $(id).addEventListener("change", (e) => { st[id] = e.target.checked; invalidate(id === "match"); });
+    for (const id of ["match", "cross", "known", "gaia", "showFilled"]) $(id).addEventListener("change", (e) => { st[id] = e.target.checked; invalidate(id === "match"); });
     $("smooth").addEventListener("change", (e) => { st.smooth = e.target.checked; $("stage").classList.toggle("crisp", !st.smooth); });
     $("resetBtn").addEventListener("click", () => applySettings(DEFAULTS));
     $("shareBtn").addEventListener("click", async () => {
@@ -969,7 +1023,7 @@
           const v = f.z[clamp(Math.floor(y), 0, st.n - 1) * st.n + clamp(Math.floor(x), 0, st.n - 1)];
           txt += v === v ? ` · ${(v * f.sigma).toFixed(3)} MJy/sr above the sky (${v.toFixed(0)}× the noise)` : " · no data here";
         }
-        $("readout").textContent = txt;
+        $("readout").textContent = txt + gaiaNear(x, y, f);
         st.hover = { pane, i: x, j: y }; if (st.mode === "side") drawOverlay(1 - pane, shown()[1 - pane]);
       });
       el.addEventListener("pointerleave", () => { st.hover = null; if (st.mode === "side") schedule(); });
@@ -1018,14 +1072,15 @@
     setTimeout(() => { if (apiOk === null) showApi(); }, 2500);
     try {
       examples = await getJson("examples/index.json");
-      const box = $("exampleList"); box.innerHTML = "";
+      const box = $("exampleList"), nasa = $("nasaList"); box.innerHTML = ""; nasa.innerHTML = "";
       for (const ex of examples) {
         const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.dataset.slug = ex.slug;
         b.innerHTML = `<strong>${esc(ex.title)}</strong><span>${esc(ex.blurb)}</span>`; if (ex.simulated) b.classList.add("simulated");
         b.addEventListener("click", () => { st.fromCode = null; loadExample(ex.slug); $("viewer").scrollIntoView({ behavior: "smooth", block: "start" }); });
-        box.appendChild(b);
+        (ex.group === "nasa" ? nasa : box).appendChild(b);
       }
-    } catch (_) { $("exampleList").innerHTML = '<span class="muted">Examples are unavailable.</span>'; }
+      $("nasaWrap").hidden = !nasa.children.length;
+    } catch (_) { $("exampleList").innerHTML = '<span class="muted">Examples are unavailable.</span>'; $("nasaWrap").hidden = true; }
 
     const p = new URLSearchParams(location.search), opts = { band: p.get("band"), size: p.get("size"), a: p.get("a"), b: p.get("b"), mode: p.get("mode"), depth: p.get("depth") };
     if (p.get("sky") && BX.openSky) BX.openSky(p.get("sky")).then((ok) => { if (!ok && examples.length) loadExample(examples[0].slug); });

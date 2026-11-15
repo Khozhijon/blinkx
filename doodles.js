@@ -194,7 +194,7 @@
       const q = new URLSearchParams({ ra: st.target.ra, dec: st.target.dec, size: st.size, ids: ids.join(",") });
       const res = await BX.getJson(`${BX.API}/api/doodles?${q}`, 240000);
       if (token !== st.token) return;
-      st.doodles = res.doodles || []; st.align = res.align || {}; st.checked = res.checked || null; st.doodleState = "done";
+      st.doodles = res.doodles || []; st.align = res.align || {}; st.checked = res.checked || null; st.doodleState = "done"; BX.invalidate(true);   // the stars' brightness scale has arrived
     } catch (e) { if (token !== st.token) return; st.doodleState = "error"; st.doodleError = e.message; }
     renderBoard(); renderDoodleLayer(true); BX.invalidate();
   };
@@ -209,7 +209,7 @@
     const sp = d.spectrum; if (!sp || !sp.points || sp.points.length < 2) return "";
     const pts = sp.points, narrow = window.innerWidth < 720, W = narrow ? 340 : 560, H = narrow ? 204 : 214, L = 46, R = 12, T0 = 24, B = 52;
     let w0 = pts[0].wl, w1 = pts[pts.length - 1].wl; const pad = Math.max(0.012, (w1 - w0) * 0.06); w0 -= pad; w1 += pad;
-    const big = Math.max(...pts.map((q) => q.mjy)), inJy = big >= 1000, k = inJy ? 0.001 : 1, top = niceCeil(big * k * 1.05), unit = inJy ? "Jy" : "mJy";
+    const big = sp.binned ? Math.max(...sp.binned.map((b) => b[1] + b[2])) * 1.9 : Math.max(...pts.map((q) => q.mjy)), inJy = big >= 1000, k = inJy ? 0.001 : 1, top = niceCeil(big * k * 1.05), unit = inJy ? "Jy" : "mJy";
     const X = (w) => L + (w - w0) / (w1 - w0) * (W - L - R), Y = (v) => T0 + (1 - v / top) * (H - T0 - B), f1 = (v) => v.toFixed(1);
     const yv = (v) => (v >= 100 ? v.toFixed(0) : v >= 10 ? String(+v.toFixed(1)) : String(+v.toPrecision(2)));
     let g = "";
@@ -222,8 +222,11 @@
     // one value per wavelength for the line; every single exposure as a dot
     const bins = []; for (const q of pts) { const last = bins[bins.length - 1]; if (last && q.wl - last.w[last.w.length - 1] < 0.006) { last.w.push(q.wl); last.f.push(q.mjy); } else bins.push({ w: [q.wl], f: [q.mjy] }); }
     const med = (a) => { const b = a.slice().sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
-    g += `<polyline class="line" points="${bins.map((b) => `${f1(X(med(b.w)))},${f1(Y(med(b.f) * k))}`).join(" ")}"/>`;
-    for (const q of pts) g += `<circle class="pt" cx="${f1(X(q.wl))}" cy="${f1(Y(q.mjy * k))}" r="${narrow ? 2.6 : 3}"><title>${q.wl.toFixed(3)} µm · ${yv(q.mjy * k)} ${unit}</title></circle>`;
+    if (sp.binned && sp.binned.length > 1) {           // a faint object: the line joins the middle value of groups of exposures, with its uncertainty
+      g += `<polyline class="line strong" points="${sp.binned.map((b) => `${f1(X(b[0]))},${f1(Y(Math.min(top, b[1] * k)))}`).join(" ")}"/>`;
+      for (const b of sp.binned) g += `<line class="err" x1="${f1(X(b[0]))}" x2="${f1(X(b[0]))}" y1="${f1(Y(Math.min(top, (b[1] + b[2]) * k)))}" y2="${f1(Y(Math.max(0, (b[1] - b[2]) * k)))}"/><rect class="bin" x="${f1(X(b[0]) - 3.5)}" y="${f1(Y(Math.min(top, b[1] * k)) - 3.5)}" width="7" height="7"><title>${b[0].toFixed(2)} µm · ${yv(b[1] * k)} ± ${yv(b[2] * k)} ${unit} (middle value of a group of exposures)</title></rect>`;
+    } else g += `<polyline class="line" points="${bins.map((b) => `${f1(X(med(b.w)))},${f1(Y(med(b.f) * k))}`).join(" ")}"/>`;
+    for (const q of pts) if (q.mjy * k <= top) g += `<circle class="pt${sp.binned ? " dim" : ""}" cx="${f1(X(q.wl))}" cy="${f1(Y(q.mjy * k))}" r="${sp.binned ? 2 : narrow ? 2.6 : 3}"><title>${q.wl.toFixed(3)} µm · ${yv(q.mjy * k)} ${unit}</title></circle>`;
     // where this slice sits in everything SPHEREx measures (0.75 to 5.0 µm)
     const LX = (w) => L + (w - 0.75) / 4.25 * (W - L - R), ly = H - 9;
     g += `<line class="loc" x1="${L}" x2="${W - R}" y1="${ly}" y2="${ly}"/><line class="loc-on" x1="${f1(LX(Math.max(0.75, pts[0].wl)))}" x2="${f1(Math.max(LX(Math.min(5, pts[pts.length - 1].wl)), LX(Math.max(0.75, pts[0].wl)) + 3))}" y1="${ly}" y2="${ly}"/>` +
@@ -237,6 +240,30 @@
       table: `<div class="scroll"><table><thead><tr><th>λ µm</th><th>flux mJy (approx.)</th><th>exposure</th></tr></thead><tbody>${rows}</tbody></table></div>` };
   }
 
+  /* ------------------------------------------------------------------ light curve: brightness at each visit */
+  function lightCurveBlock(d, color) {
+    const b = d.brightness; if (!b || !b.curve || b.curve.length < 4) return "";
+    const narrow = window.innerWidth < 720, W = narrow ? 340 : 560, H = narrow ? 176 : 186, L = 46, R = 12, T0 = 22, B = 34;
+    const visits = [...new Set(b.curve.map((q) => q[2]))].sort((p, q) => p - q), col = (W - L - R) / visits.length;
+    const vals = b.curve.map((q) => q[1]), top = Math.max(1.5, Math.ceil(Math.max(...vals) * 10 + 1) / 10), bot = Math.max(0, Math.min(0.5, Math.floor(Math.min(...vals) * 10 - 1) / 10));
+    const Y = (v) => T0 + (1 - (v - bot) / (top - bot)) * (H - T0 - B), f1 = (v) => v.toFixed(1);
+    const mjdDate = (m) => new Date((m - 40587) * 86400000).toISOString();
+    let g = `<line class="ax" x1="${L}" x2="${L}" y1="${T0}" y2="${H - B}"/><line class="ax" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/>`;
+    for (const v of [bot, 1, top]) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${f1(Y(v))}" y2="${f1(Y(v))}"/><text x="${L - 6}" y="${f1(Y(v) + 3.5)}" text-anchor="end">${v === 1 ? "1.0" : v.toFixed(1)}</text>`;
+    g += `<text x="${L - 6}" y="${T0 - 9}" text-anchor="end">× usual</text>`;
+    visits.forEach((v, i) => {
+      const pts = b.curve.filter((q) => q[2] === v), x0 = L + col * i, t0 = pts[0][0], t1 = pts[pts.length - 1][0], span = Math.max(t1 - t0, 1e-6);
+      const level = pts.map((q) => q[1]).sort((p, q) => p - q), mid = level.length % 2 ? level[level.length >> 1] : (level[(level.length >> 1) - 1] + level[level.length >> 1]) / 2;
+      for (const q of pts) g += `<circle class="pt dim" cx="${f1(x0 + col * (0.25 + 0.5 * (q[0] - t0) / span))}" cy="${f1(Y(q[1]))}" r="${narrow ? 2.2 : 2.6}"><title>${mjdDate(q[0]).slice(0, 16).replace("T", " ")} UTC · ${q[1].toFixed(2)} × its usual brightness</title></circle>`;
+      g += `<line class="line strong" x1="${f1(x0 + col * 0.15)}" x2="${f1(x0 + col * 0.85)}" y1="${f1(Y(mid))}" y2="${f1(Y(mid))}"/>`;
+      g += `<text x="${f1(x0 + col / 2)}" y="${H - B + 15}" text-anchor="middle">${BX.monthYear(mjdDate(t0))}</text><text class="lc-n" x="${f1(x0 + col / 2)}" y="${H - B + 28}" text-anchor="middle">${pts.length} exposures · ${mid.toFixed(2)}×</text>`;
+    });
+    return `<section class="spectrum lightcurve" style="--c:${color}"><h3>Brightness at each visit</h3>` +
+      `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Brightness of this object at ${visits.length} visits">${g}</svg>` +
+      `<p class="muted">Each dot is one exposure; the bar is the middle value of a visit. 1.0 is this object's own usual brightness, measured against the steady stars around it, ` +
+      `after its colour trend is taken out (every exposure has a different infrared colour).</p></section>`;
+  }
+
   function openCard(id) {
     const d = st.doodles.find((x) => x.id === id); if (!d) return;
     st.pickedDoodle = id;
@@ -248,7 +275,8 @@
     if (m.jump_arcsec) rows.push(["Jump", `${fmtNum(m.jump_arcsec, 0)}″ back and forth` + (m.distance_au ? ` → roughly ${fmtNum(m.distance_au, 0)} times the Earth–Sun distance` : "")]);
     if (d.tail_direction) rows.push(["Tail points", `toward the ${d.tail_direction}`]);
     if (b.change_pct) rows.push(["Brightness", `${b.change} by ${fmtNum(b.change_pct, 0)}%`]);
-    rows.push(["Seen", `${d.sightings} time${d.sightings === 1 ? "" : "s"}: ${BX.fmtDate(first.date)}` + (d.sightings > 1 ? ` → ${BX.fmtDate(last.date)}` : "")]);
+    if (d.deep) rows.push(["Found in", `${d.deep.visits} deep pictures, each one a visit's exposures added together (${d.deep.exposures} exposures in all). Ordinary stars shift by ${fmtNum(d.deep.star_scatter_arcsec, 2)}″ between them.`]);
+    rows.push(["Seen", (d.deep ? `in ${d.sightings} visits: ` : `${d.sightings} time${d.sightings === 1 ? "" : "s"}: `) + (d.deep ? BX.fmtDate(first.date, false) : BX.fmtDate(first.date)) + (d.sightings > 1 ? ` → ${d.deep ? BX.fmtDate(last.date, false) : BX.fmtDate(last.date)}` : "")]);
     rows.push(["Where", `${BX.fmtSexa(first.ra, first.dec)}`]);
     rows.push(["How sure", `${Math.round((d.confidence || 0) * 100)}% <span class="muted">(a rule-of-thumb score from how often and how clearly it was seen)</span>`]);
     rows.push(["Checked in", esc((d.checked || []).join(", ") || "no catalogue could be reached")]);
@@ -258,14 +286,23 @@
       `<header class="card-head" style="--c:${T.color}"><div class="big">${glyph(d, 96)}</div><div><p class="kind">${esc(T.label)} · ${esc(T.what)}</p>` +
       `<h2>${esc(d.id)} <span>“${esc(d.nickname)}”</span></h2>${statusChip(d)}</div></header>` +
       `<p class="explain-text">${esc(d.explain || "")}</p>` +
-      `<dl class="card-facts">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` + spec.html +
+      `<dl class="card-facts">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` + lightCurveBlock(d, T.color) + spec.html +
       (d.status !== "known" ? `<p class="disclaimer">This is a candidate, not a discovery. Image flaws, reflections of bright stars and objects that shine in only one infrared colour can all look like this.</p>` : "") +
       `<details class="sci-table"><summary>Numbers for scientists</summary><div class="scroll"><table><thead><tr><th>UTC (mid-group)</th><th>RA °</th><th>Dec °</th><th>x, y (grid px)</th><th>λ µm</th><th>peak / noise</th><th>exposures</th></tr></thead><tbody>${sci}</tbody></table></div>${spec.table}` +
       `<p class="muted">Field centre RA ${d.field.ra}°, Dec ${d.field.dec}°, ${d.field.size_deg}° wide, ${d.field.pixscale_arcsec}″ per grid pixel (a SPHEREx detector pixel is 6.15″).` +
       (d.known && d.known.sep_arcsec != null ? ` Catalogue position differs by ${d.known.sep_arcsec}″.` : "") + (m.fit_rms_arcsec != null ? ` Straight-line fit scatter ${m.fit_rms_arcsec}″.` : "") + `</p></details>` +
-      `<div class="actions"><button class="btn primary" type="button" id="cardBlink">${d.sightings > 1 ? "Blink first vs last sighting" : "Show the picture it is in"}</button>` +
+      `<div class="actions"><button class="btn primary" type="button" id="cardBlink">${d.deep ? "Blink first vs last visit, added up" : d.sightings > 1 ? "Blink first vs last sighting" : "Show the picture it is in"}</button>` +
       `<button class="btn ghost" type="button" id="cardCopy">Copy coordinates</button></div>`;
     $("cardBlink").addEventListener("click", () => {
+      if (d.deep) {                                            // seen only when a visit's exposures are added together
+        BX.setDepth("visit");
+        const holds = (id) => st.frames.find((f) => f.stack && f.stack.ids.includes(id));
+        const sa = holds(first.frame), sb = holds(last.frame);
+        if (sa && sb && sa !== sb) { st.a = sa.id; st.b = sb.id; BX.afterPairChange(); BX.setMode("blink"); BX.setPlaying(true); }
+        else BX.toast(st.stackWait ? "The pictures are still arriving; the visits will be added up in a moment." : "Those visits are not among the pictures loaded here.");
+        closeCard(); $("stage").scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
       if (st.depth !== "single") BX.setDepth("single");         // sightings are single exposures
       const fa = BX.byId(first.frame), fb = BX.byId(last.frame);
       if (fa) st.a = fa.id; if (fb && fb !== fa) st.b = fb.id;
