@@ -4,7 +4,8 @@
 - One line: a blink comparator for NASA's SPHEREx all-sky survey, in your browser.
 - Visual: the landing page (the real SPHEREx Milky Way under the headline), or
   `submission/screens/after-desktop-1-landing.jpg`.
-- Team KhoFra · NASA Space Apps 2026, Boston · Challenge: *Planet X and SPHEREx* · public URL.
+- Team KhoFra: Khozhiakbar Khakimov Furkatzhonovich and Franci Constanza Coyotl Cortes · NASA Space Apps 2026, Boston · Challenge:
+  *Planet X and SPHEREx* · public URL.
 
 ## 2. The problem
 - SPHEREx re-images the whole sky about every six months, in 102 infrared colours: more than a

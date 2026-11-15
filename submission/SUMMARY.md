@@ -1,5 +1,7 @@
 # Blink X — project summary
 
+Team KhoFra: Khozhiakbar Khakimov Furkatzhonovich and Franci Constanza Coyotl Cortes.
+
 **Problem.** NASA's SPHEREx telescope re-photographs the whole sky every six months in 102
 infrared colours. Hidden in those repeat images are things that move or change: asteroids, comets,
 nearby stars, perhaps a planet nobody has seen. But each image is a 62 MB science file only a
