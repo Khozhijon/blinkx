@@ -41,7 +41,11 @@ too small to trust, and draws nothing rather than guess. Typing the challenge's 
 for WISE 0855 gives its 2010 position; the brown dwarf has since moved 2 arcminutes west, and the
 deep search still finds it there in the 3.8–4.4 µm band.
 
-![Barnard's Star, 13 months apart, and the difference image](spike/out/spike_barnard.png)
+![The landing page: the real SPHEREx sky](submission/screens/new-landing.png)
+
+![WISE 0855, found by adding each visit's exposures together; the dashed rings are Gaia stars](submission/screens/new-wise-0855-added-up.png)
+
+More screenshots are in `submission/screens/`.
 
 ## What it does
 
