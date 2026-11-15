@@ -740,7 +740,7 @@
     st.singles = []; st.stackWait = false; st.depth = opts.depth === "visit" || opts.depth === "all" ? opts.depth : "single"; $("depth").value = st.depth;
     st.band = +opts.band || 2; st.size = +opts.size || 0.1; st.n = gridSize(st.size);
     st.marks = loadMarks();
-    st.doodles = []; st.align = {}; st.checked = null; st.doodleState = "idle"; st.pickedDoodle = null;
+    st.doodles = []; st.align = {}; st.checked = null; st.expected = []; st.dismissed = []; st.doodleState = "idle"; st.pickedDoodle = null;
     if (BX.hooks.reset) BX.hooks.reset();
     $("viewer").hidden = false; $("size").value = String(st.size);
     $("targetName").textContent = target.name || "Sky position";
@@ -877,7 +877,7 @@
     applySettings({ ...DEFAULTS, known: !!ex.known_default, ...(ex.settings || {}) });
     adoptFrames(frames, { a: opts.a || ex.a, b: opts.b || ex.b, mode: opts.mode || ex.mode });
     setPlaying(true);
-    st.doodles = ex.doodles || []; st.align = ex.align || {}; st.checked = ex.checked || null; st.doodleState = "done";
+    st.doodles = knownFirst(ex.doodles || []); st.align = ex.align || {}; st.checked = ex.checked || null; st.expected = ex.expected || []; st.dismissed = ex.dismissed || []; st.doodleState = "done";
     if (BX.hooks.doodles) BX.hooks.doodles();
     setStatus(st.summary + " (Example saved from the archive, so it opens instantly.)");
     $("load0").hidden = true; $("q").value = ""; syncUrl();
@@ -922,6 +922,16 @@
   }
 
   /* ------------------------------------------------------------------ share */
+  /** Doodles that a catalogue could name come first; the rest keep their order. */
+  const knownFirst = (list) => list.slice().sort((p, q) => (p.status === "known" ? 0 : 1) - (q.status === "known" ? 0 : 1));
+
+  /** Drop a numbered mark at a sky position (used for "look near here"). */
+  function addMark(ra, dec) {
+    const f = shown()[0];
+    if (!st.marks.some((m) => Math.hypot((m.ra - ra) * Math.cos(rad(dec)), m.dec - dec) * 3600 < 3)) st.marks.push({ ra, dec, date: f ? (f.date_obs || "").slice(0, 19) : "", frame: f ? f.id : "" });
+    saveMarks(); renderMarks(); schedule();
+  }
+
   function shareUrl() {
     const p = new URLSearchParams();
     if (st.example && st.size === st.example.size && st.band === st.example.band) p.set("ex", st.example.slug);
@@ -1100,7 +1110,7 @@
 
   Object.assign(BX, {
     $, esc, api, getJson, toast, setStatus, fmtDate, fmtSexa, fmtGap, fmtWl, monthYear, skyToPix, pixToSky, byId, schedule, invalidate,
-    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive, setDepth, when,
+    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive, setDepth, when, addMark, knownFirst,
   });
   boot();
 })();

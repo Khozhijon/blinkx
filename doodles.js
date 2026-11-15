@@ -165,6 +165,22 @@
       `<span class="g">${glyph(d, 54)}</span><span class="t"><strong>${esc(d.id)} · ${esc(d.nickname)}</strong>` +
       `<span>${esc((TYPES[d.type] || {}).label || d.type)}: ${esc(summary(d))}</span></span>${statusChip(d)}</button>`).join("");
     for (const b of list.querySelectorAll(".doodle")) b.addEventListener("click", () => openCard(b.dataset.id));
+    // honesty cuts both ways: a catalogued fast mover that should be here and that no doodle explains
+    const miss = $("doodleExpected"), exp = st.doodleState === "done" ? (st.expected || []) : [];
+    miss.hidden = !exp.length;
+    if (exp.length) {
+      const deep = st.band >= 5 ? "" : " Cool objects show best in the 3.8–5.0 µm bands.";
+      miss.innerHTML = `<strong>Not found here, but catalogued:</strong> ` + exp.map((e) => `${esc(e.name)}, a ${esc(e.kind)} that ${esc(e.source)} lists as moving ${e.pm_arcsec_per_year.toFixed(2)}″ a year`).join("; ") +
+        `. ${exp.length === 1 ? "It" : "They"} may be too faint or too red in this colour band, or there may be too little time between these pictures.${deep} ` +
+        (st.depth === "single" ? `Try <button type="button" class="linklike" id="tryDeep">adding the exposures up per visit</button>` : "Try another colour band") + ` and look near ` +
+        exp.map((e) => `<button type="button" class="linklike" data-ra="${e.ra}" data-dec="${e.dec}" data-name="${esc(e.name)}">${esc(BX.fmtSexa(e.ra, e.dec))}</button>`).join(", ") + ".";
+      const t = $("tryDeep"); if (t) t.addEventListener("click", () => BX.setDepth("visit"));
+      for (const b of miss.querySelectorAll("[data-ra]")) b.addEventListener("click", () => { if (BX.addMark) BX.addMark(+b.dataset.ra, +b.dataset.dec); $("stage").scrollIntoView({ behavior: "smooth", block: "center" }); });
+    }
+    // apparent drifts that an older survey rules out: shown, so nobody wonders what the search looked at and dropped
+    const gone = $("doodleDismissed"), dis = st.doodleState === "done" ? (st.dismissed || []) : [];
+    gone.hidden = !dis.length;
+    if (dis.length) gone.innerHTML = `<strong>Checked and set aside:</strong> ` + dis.map((x) => `an apparent drift of ${x.claimed_rate.toFixed(1)}″ a year near ${esc(BX.fmtSexa(x.ra, x.dec))}. ${x.survey === "WISE" ? "NASA's WISE telescope" : "ESA's Gaia"} already saw a source on that very spot in ${x.year}, so nothing travelled there since`).join("; ") + ".";
     // how the exposures were lined up, and by how much the star pattern disagreed
     const al = Object.values(st.align || {}), note = $("alignNote");
     note.hidden = !al.length;
@@ -188,13 +204,13 @@
     const ok = (st.singles.length ? st.singles : st.frames).filter((f) => f.z && !f.stack), token = st.token;   // always the single exposures
     if (ok.length < 2) { st.doodleState = "done"; renderBoard(); return; }
     let ids = ok.map((f) => f.id);
-    if (ids.length > 40) { const keep = new Set([st.a, st.b]), stepSize = ids.length / 38; for (let x = 0; x < ids.length; x += stepSize) keep.add(ids[Math.floor(x)]); ids = ids.filter((i) => keep.has(i)); }
+    if (ids.length > 48) { const keep = new Set([st.a, st.b].filter((i) => ids.includes(i))), stepSize = ids.length / (48 - keep.size); for (let x = 0; x < ids.length && keep.size < 48; x += stepSize) keep.add(ids[Math.floor(x)]); ids = ids.filter((i) => keep.has(i)); }
     st.doodleState = "loading"; renderBoard();
     try {
       const q = new URLSearchParams({ ra: st.target.ra, dec: st.target.dec, size: st.size, ids: ids.join(",") });
       const res = await BX.getJson(`${BX.API}/api/doodles?${q}`, 240000);
       if (token !== st.token) return;
-      st.doodles = res.doodles || []; st.align = res.align || {}; st.checked = res.checked || null; st.doodleState = "done"; BX.invalidate(true);   // the stars' brightness scale has arrived
+      st.doodles = BX.knownFirst(res.doodles || []); st.align = res.align || {}; st.checked = res.checked || null; st.expected = res.expected || []; st.dismissed = res.dismissed || []; st.doodleState = "done"; BX.invalidate(true);   // the stars' brightness scale has arrived
     } catch (e) { if (token !== st.token) return; st.doodleState = "error"; st.doodleError = e.message; }
     renderBoard(); renderDoodleLayer(true); BX.invalidate();
   };
