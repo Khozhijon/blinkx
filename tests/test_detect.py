@@ -108,3 +108,18 @@ def test_zigzag_must_close_like_a_real_orbit():
 
     assert detect._zigzag_plausible(chain(825.0, 118.0), pix)       # 500 au: drifts about 116" a year
     assert not detect._zigzag_plausible(chain(245.0, 84.0), pix)    # 1700 au could drift only about 19" a year
+
+
+def test_spectrum_reads_a_gas_line_but_not_a_change_with_time():
+    # a comet-like spectrum: flat, with carbon dioxide glowing at 4.26 µm over two neighbouring channels
+    wl = [3.96, 4.00, 4.03, 4.07, 4.10, 4.14, 4.18, 4.21, 4.25, 4.28, 4.32, 4.36]
+    fx = [3.4, 3.1, 3.2, 3.7, 3.3, 3.6, 3.9, 4.0, 240.0, 150.0, 4.1, 3.8]
+    sp = detect.spectrum([[w, f, f"E{i}"] for i, (w, f) in enumerate(zip(wl, fx))], "tail")
+    assert len(sp["points"]) == 12 and sp["peak_um"] == pytest.approx(4.25)
+    assert "Carbon dioxide gas" in sp["hint"] and "not proof" in sp["hint"]
+    # a star that doubled in one visit, measured at the same four wavelengths every visit: that is time, not colour
+    spec = [[w, 28.0 if visit == 2 else 14.0, f"V{visit}W{w}"] for visit in range(4) for w in (1.45, 1.47, 1.49, 1.51)]
+    sp = detect.spectrum(spec, "pulse")
+    assert "peak_um" not in sp and "changes with time" in sp["hint"]
+    # too few wavelengths: no reading at all
+    assert "too few" in detect.spectrum([[1.45, 5.0, "a"], [1.47, 5.1, "b"]], "spark")["hint"]

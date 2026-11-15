@@ -12,6 +12,13 @@ words (a calm pace for 30 s).
 | 0:23–0:28 | Click **Copy Sky Code**, then type **M51** in the search box and press **Look**. | “One Sky Code shares any view. And you can hunt anywhere in the sky.” |
 | 0:28–0:30 | Back to the landing headline, with the URL on screen. | “Blink X. The sky moves. Catch it.” |
 
+## Optional swap: the carbon dioxide shot
+
+If you want one more “wow” and can spare four seconds, replace the 0:23–0:28 shot with this one:
+target **A comet's hidden gas**, click the doodle, scroll the Object Card to
+**Spectrum**. Voice-over: “And every object gets a spectrum. This comet from another star is
+sixty-five times brighter exactly where carbon dioxide glows.”
+
 ## Recording tips
 
 - Open the page a few minutes early and run the M51 search once, so the free server is awake and

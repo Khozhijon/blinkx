@@ -412,6 +412,8 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
     doodles: list[dict] = []
     conc_star = _star_concentration(dets, groups, len(frames))
 
+    to_mjy = 1e9 * (pix / 206264.8) ** 2  # image units are MJy/sr; a sum over grid pixels times their solid angle is a flux
+
     def sight(det_ids: list[int]) -> list[dict]:
         """One point per burst: mean position, time and brightness of the detections in it."""
         pts = []
@@ -426,6 +428,8 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
                 "ra": round(float(ra), 6), "dec": round(float(dec), 6), "n": len(ks),
                 "flux": round(float(np.median([dets[k].flux for k in ks])), 2), "peak_sigma": round(float(np.median([dets[k].peak for k in ks])), 1),
                 "wavelength_um": round(float(np.mean([frames[dets[k].f].wl for k in ks])), 4), "visit": int(visit[dets[kmid].f]),
+                # per exposure: wavelength, brightness as measured (before the frame-to-frame scaling), exposure id
+                "spec": [[frames[dets[k].f].wl, dets[k].flux * frames[dets[k].f].scale * to_mjy, frames[dets[k].f].id] for k in ks],
             })
         return pts
 
@@ -529,6 +533,8 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
         d["status"] = "candidate"
         d["known"] = None
         d["field"] = {"ra": ra0, "dec": dec0, "size_deg": size_deg, "n": n, "pixscale_arcsec": round(pix, 3)}
+        spec = [sp for q in d["points"] for sp in q.pop("spec", [])]
+        d["spectrum"] = spectrum(spec, d["type"])
         explain(d)
     order = {"zigzag": 0, "tail": 1, "spark": 2, "arrow": 3, "pulse": 4}
     doodles.sort(key=lambda d: (order[d["type"]], -d.get("confidence", 0)))
@@ -746,6 +752,7 @@ def _zigzag_doodle(dets, chain, sight, pix) -> dict:
         q = dict(ps[len(ps) // 2])
         for key in ("x", "y", "ra", "dec", "t"):
             q[key] = round(float(np.mean([p[key] for p in ps])), 6)
+        q["spec"] = [sp for p in ps for sp in p.get("spec", [])]
         per.append(q)
     d = _base("zigzag", per)
     jumps = [math.hypot(b["x"] - a["x"], b["y"] - a["y"]) * pix for a, b in zip(per[:-1], per[1:])]
@@ -815,6 +822,97 @@ def _variability(dets, ids, frames, visit):
 
 
 # --------------------------------------------------------------------------- words
+
+
+# Wavelengths (µm) where common gases glow, for the hint under the spectrum. A match is a hint, never proof.
+SPECTRAL_FEATURES = [
+    (1.083, "helium gas", ""), (1.282, "hydrogen gas", ""), (1.875, "hydrogen gas", ""), (2.166, "hydrogen gas", ""),
+    (2.66, "water vapour", " Comets give off this gas when sunlight warms their ice."),
+    (3.29, "sooty carbon molecules", ""), (4.05, "hydrogen gas", ""),
+    (4.26, "carbon dioxide gas", " Comets give off this gas when sunlight warms their ice."),
+    (4.67, "carbon monoxide gas", " Comets give off this gas when sunlight warms their ice."),
+]
+
+
+def _resolving_power(wl: float) -> float:
+    """SPHEREx spectral resolving power: about 41 in bands 1-3, 35 in band 4, 110 in band 5, 130 in band 6."""
+    return 41.0 if wl < 2.42 else 35.0 if wl < 3.82 else 110.0 if wl < 4.42 else 130.0
+
+
+def _point_scatter(pts: list) -> float:
+    """Robust scatter of the single measurements around a straight line through them."""
+    w, f = np.array([q[0] for q in pts]), np.array([q[1] for q in pts])
+    r = f - np.polyval(np.polyfit(w, f, 1), w) if len({round(float(v), 3) for v in w}) > 1 else f - np.median(f)
+    return 1.4826 * float(np.median(np.abs(r - np.median(r))))
+
+
+def spectrum(spec: list, kind: str = "") -> dict | None:
+    """Brightness at every wavelength the object was measured at, with a careful plain-language reading.
+
+    ``spec`` is a list of [wavelength in µm, flux in mJy, exposure id]. Each SPHEREx exposure sees a
+    given spot of sky at one wavelength, so the exposures of one object add up to a piece of its spectrum.
+    The flux is a small-aperture sum (radius 1.5 SPHEREx pixels) without aperture correction: approximate.
+    """
+    pts = sorted(([float(w), float(f), str(i)] for w, f, i in spec if w and w > 0 and f and f > 0 and math.isfinite(f)), key=lambda q: q[0])
+    if not pts:
+        return None
+    out = {"unit": "mJy", "aperture_arcsec": round(1.5 * NATIVE, 1),
+           "points": [{"wl": round(w, 4), "mjy": float(f"{f:.4g}"), "frame": i} for w, f, i in pts]}
+    # one value per wavelength: repeat visits to the same wavelength are combined, so a change with time is not read as colour
+    bins: list[list[list[float]]] = []
+    for w, f, _ in pts:
+        if bins and w - bins[-1][-1][0] < 0.25 * w / _resolving_power(w):
+            bins[-1].append([w, f])
+        else:
+            bins.append([[w, f]])
+    wl = np.array([float(np.mean([q[0] for q in g])) for g in bins])
+    fx = np.array([float(np.median([q[1] for q in g])) for g in bins])
+    if len(wl) < 4:
+        out["hint"] = "These exposures cover too few different wavelengths to read a pattern. Another colour band shows a different piece of the spectrum."
+        return out
+    k = int(np.argmax(fx))
+    rw, rf = np.delete(wl, k), np.delete(fx, k)
+    base = float(np.median(rf))
+    resid = rf - np.polyval(np.polyfit(rw, rf, 1), rw)
+    mad = 1.4826 * float(np.median(np.abs(resid - np.median(resid))))
+    when = " Each point is a separate exposure, taken at a different time."
+    if kind == "pulse":
+        when += " This object also changes with time, so colour and change are mixed here."
+    raised = (fx > 1.5 * base) & (fx - base > 6.0 * mad)
+    if base <= 0:
+        return out
+    if raised[k] and (raised.sum() >= 2 or mad / base <= 0.15):
+        w = float(wl[k])
+        near = min(SPECTRAL_FEATURES, key=lambda f: abs(f[0] - w))
+        text = f"It is about {fx[k] / base:.0f} times brighter" if fx[k] / base >= 10 else f"It is about {fx[k] / base:.1f} times brighter"
+        text += f" near {w:.2f} µm than at the other wavelengths measured here."
+        if abs(near[0] - w) <= 0.6 * w / _resolving_power(w):
+            text += f" {near[1].capitalize()} glows at {near[0]:.2f} µm, so that is one possible reason: a hint, not proof.{near[2]}"
+        else:
+            text += " One wavelength standing out like that can be glowing gas."
+        if raised.sum() >= 2:
+            text += " The wavelengths next to it are raised too, so this is not one bad measurement."
+        elif kind in ("tail", "spark", "zigzag"):
+            text += " It can also be a faint star behind the object in that one exposure, or one bad measurement."
+        else:
+            text += " It can also be a brief flare, or one bad measurement."
+        out["hint"], out["peak_um"] = text, round(w, 3)
+    elif max(mad, _point_scatter(pts)) / base > 0.15:
+        out["hint"] = ("The measurements scatter too much to read a pattern. That happens when an object is so bright that it overloads the detector, "
+                       "or when it is changing while SPHEREx watches." + when)
+    else:
+        third = max(1, len(fx) // 3)
+        blue, red = float(np.median(fx[:third])), float(np.median(fx[-third:]))
+        noise = 3.0 * mad / math.sqrt(third)
+        span = f"From {float(wl[0]):.2f} to {float(wl[-1]):.2f} µm"
+        if red > 1.2 * blue and red - blue > noise:
+            out["hint"] = f"{span} it gets brighter toward longer wavelengths, by about {100 * (red / blue - 1):.0f}%. Cool or dusty objects do that."
+        elif red < blue / 1.2 and blue - red > noise:
+            out["hint"] = f"{span} it fades toward longer wavelengths, by about {100 * (1 - red / blue):.0f}%. Warm stars and reflected sunlight do that."
+        else:
+            out["hint"] = f"{span} it is about equally bright: no strong colour inside this band."
+        out["hint"] += when
+    return out
 
 
 def explain(d: dict) -> None:

@@ -370,6 +370,17 @@ body.sci .sci-only { display: block !important; } body.sci .sci-inline { display
 .card-facts dt, .card-facts dd { padding: 7px 0; border-top: 1px solid var(--rule); margin: 0; }
 .card-facts dt { color: var(--bone-3); letter-spacing: .1em; text-transform: uppercase; font-size: 10px; padding-top: 9px; }
 .card-facts dd { overflow-wrap: anywhere; } .card-facts dd .muted { font-family: var(--f-body); }
+.spectrum { padding-top: var(--s2); padding-bottom: var(--s4); }
+.spectrum h3 { font: 500 10px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--bone-3); margin: 0 0 10px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.spectrum svg { display: block; width: 100%; height: auto; overflow: visible; }
+.spectrum text { font: 400 10px var(--f-mono); fill: var(--bone-3); font-variant-numeric: tabular-nums; }
+.spectrum .ax { stroke: var(--rule-2); stroke-width: 1; } .spectrum .grid { stroke: var(--rule); stroke-width: 1; }
+.spectrum .mark { stroke: var(--ir); stroke-width: 1; stroke-dasharray: 2 3; } .spectrum .mark-t { fill: var(--ir); }
+.spectrum .line { stroke: var(--bone-3); stroke-width: 1; fill: none; } .spectrum .pt { fill: var(--c, var(--bone)); }
+.spectrum .loc { stroke: var(--rule-2); stroke-width: 1; } .spectrum .loc-on { stroke: var(--bone); stroke-width: 3; }
+.spectrum .spec-hint { font-size: 14.5px; line-height: 1.5; margin-top: 12px; }
+.spectrum .muted { font-size: 11.5px; line-height: 1.5; margin-top: 6px; }
+.sci-table .scroll + .scroll { margin-top: 14px; }
 .disclaimer { font-size: 13px; color: var(--bone); border-left: 2px solid var(--ir); padding: 8px 12px !important; margin: 0 var(--s6) var(--s4); background: var(--plate); }
 .sci-table { padding-bottom: var(--s3); }
 .sci-table summary { cursor: pointer; font: 500 11px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--bone-2); }

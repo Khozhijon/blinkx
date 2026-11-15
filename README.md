@@ -81,6 +81,15 @@ that exist only part of the time are linked into straight tracks → anchors are
 drift and for brightness changes. Faint detections inside the glare of a very bright object, and
 anything seen in a single exposure only, are dropped: those are halos, reflections and cosmic rays.
 
+**Spectrum in the Object Card.** Every SPHEREx exposure sees a spot of sky in one infrared colour,
+so the exposures of one object add up to a piece of its spectrum. The card plots the object's
+brightness (approximate millijanskys, 9.2″ aperture, no aperture correction) against wavelength,
+marks where common gases glow, and reads the shape in plain words, with the reasons it might be
+wrong. On the saved CO₂-band field the interstellar comet 3I/ATLAS comes out about 65 times
+brighter at 4.25 µm than next to it: carbon dioxide gas glows at 4.26 µm. Repeat visits to the
+same wavelength are combined first, so a change with time is not read as colour
+(`backend/detect.py: spectrum`, tested in `tests/test_detect.py`).
+
 Flagged objects are then checked against catalogues (`backend/catalogs.py`): IMCCE SkyBoT and
 JPL Horizons for asteroids and comets, SIMBAD for fast-moving and variable stars. A match is
 labelled **known**. No match is labelled **candidate**, with the reasons it might be nothing.

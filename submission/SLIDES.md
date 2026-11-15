@@ -21,7 +21,8 @@
   green = gone), **Time-lapse**.
 - **Sky Doodles**: the app finds what changed and draws it — arrow (asteroid), tail (comet),
   zigzag (the wobble of a distant planet), spark (appeared or vanished), pulse (changed
-  brightness). Each has an Object Card: measured speed, direction, catalogue check, and the word
+  brightness). Each has an Object Card: measured speed, direction, catalogue check, a spectrum
+  (comet 3I/ATLAS is 65 times brighter at 4.25 µm, where carbon dioxide glows), and the word
   “candidate” for anything unexplained.
 - Choose the infrared band and field size, share any view with one **Sky Code**, export JSON,
   CSV, SVG or PNG.
@@ -47,5 +48,6 @@
 - Classrooms: the Pluto discovery method, hands-on, with this year's NASA data.
 - Researchers: a two-second visual check of any position across SPHEREx epochs.
 - Next: a shared list where citizen scientists flag candidates for astronomers; a “Hunt for
-  Planet X” game; a spectrum for every object; each new SPHEREx release adds another epoch.
+  Planet X” game; the full 102-colour spectrum of every object; each new SPHEREx release adds
+  another epoch.
 - Close with the URL and the repository link.
