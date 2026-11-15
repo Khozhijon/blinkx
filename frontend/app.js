@@ -698,6 +698,33 @@
   let urlTimer = null;
   function syncUrl() { clearTimeout(urlTimer); urlTimer = setTimeout(() => { try { history.replaceState(null, "", shareUrl()); } catch (_) { /* file:// */ } }, 250); }
 
+  /** Download what is on screen as a PNG, with a caption strip saying what, when and from where. */
+  function savePicture() {
+    if (!st.target || !st.frames.length) return;
+    const panes = st.mode === "side" ? [0, 1] : [0], S = 640, pad = 12, capH = 64;
+    const out = document.createElement("canvas"); out.width = panes.length * S + (panes.length + 1) * pad; out.height = S + capH + 2 * pad;
+    const ctx = out.getContext("2d");
+    ctx.fillStyle = "#0a0d16"; ctx.fillRect(0, 0, out.width, out.height);
+    ctx.imageSmoothingEnabled = st.smooth;
+    panes.forEach((pn, k) => {
+      const x = pad + k * (S + pad);
+      ctx.drawImage($("cv" + pn), x, pad, S, S);
+      ctx.fillStyle = "#fff"; ctx.font = "600 17px system-ui, sans-serif"; ctx.shadowColor = "#000"; ctx.shadowBlur = 6;
+      ctx.fillText($("cap" + pn).textContent.replace(/^([AB]|B − A|\d+ \/ \d+)/, "$1  "), x + 10, pad + 26);
+      ctx.shadowBlur = 0;
+    });
+    ctx.fillStyle = "#e9edf7"; ctx.font = "600 16px system-ui, sans-serif";
+    ctx.fillText(`${st.target.name || "Sky position"} — RA ${st.target.ra.toFixed(4)}°, Dec ${st.target.dec >= 0 ? "+" : ""}${st.target.dec.toFixed(4)}°, field ${(st.size * 60).toFixed(0)}′, north up`, pad, S + pad + 26);
+    ctx.fillStyle = "#98a4be"; ctx.font = "14px system-ui, sans-serif";
+    ctx.fillText("NASA SPHEREx Level-2 image(s) via NASA/IPAC IRSA · made with Blink X", pad, S + pad + 48);
+    out.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = `blinkx-${(st.target.name || "sky").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${st.mode}.png`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, "image/png");
+  }
+
   /* ------------------------------------------------------------------ wiring */
   function paneEvent(pane, ev) {
     const r = $("pane" + pane).getBoundingClientRect();
@@ -730,6 +757,7 @@
       try { await navigator.clipboard.writeText(url); toast("Link copied — anyone who opens it sees this exact view."); }
       catch (_) { window.prompt("Copy this link:", url); }
     });
+    $("saveBtn").addEventListener("click", savePicture);
     $("markBtn").addEventListener("click", () => {
       st.marking = !st.marking; $("markBtn").setAttribute("aria-pressed", String(st.marking)); $("stage").classList.toggle("marking", st.marking);
       renderMarks(); if (st.marking) toast("Tap the picture where something moved.");

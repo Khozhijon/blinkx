@@ -16,11 +16,12 @@ Then tell Claude "repo created". Claude pushes the code and the static page from
 git remote add origin https://github.com/Khozhijon/blinkx.git && git push -u origin main && sh scripts/publish_pages.sh
 ```
 
-## 2. Deploy the backend on Render (about 4 clicks, free, no card)
+## 2. Deploy the backend on Render (about 4 clicks, free plan)
 
 1. Open <https://render.com/deploy?repo=https://github.com/Khozhijon/blinkx>
 2. Sign in with GitHub (first time: Render asks to read your repositories — allow the `blinkx` repo).
-3. Render shows the blueprint "blinkx-khofra" (free plan). Press **Deploy Blueprint** / **Apply**.
+3. Render shows the blueprint "blinkx-khofra" on the **Free** plan. Press **Deploy Blueprint** / **Apply**.
+   If Render asks for a payment card, stop and tell Claude: the blueprint only asks for the free plan.
 4. Wait 3–5 minutes for the first build. The address will be
    `https://blinkx-khofra.onrender.com` (if Render shows a different address, tell Claude: one
    line in `frontend/config.js` must match it).
