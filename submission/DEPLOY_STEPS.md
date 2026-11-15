@@ -35,4 +35,6 @@
 git push origin main && sh scripts/publish_pages.sh
 ```
 
-A push to `main` redeploys the Render backend; `publish_pages.sh` updates the GitHub Pages copy.
+`publish_pages.sh` updates the GitHub Pages copy. The Render backend did not redeploy by itself after a
+push on 15 Nov 2026, so after changing backend code open the service in the Render dashboard and choose
+**Manual Deploy → Deploy latest commit**.
