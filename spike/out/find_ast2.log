@@ -1,0 +1,40 @@
+# 16 Psyche (A852 FA): 212 of 2073 6-h steps have elongation (80.0, 100.0)
+#   50/212 SIA windows, 93 exposures so far
+#   100/212 SIA windows, 152 exposures so far
+#   150/212 SIA windows, 231 exposures so far
+#   200/212 SIA windows, 255 exposures so far
+# 16 Psyche (A852 FA): 255 exposures near the track, checking WCS...
+== 16 Psyche (A852 FA): 246 exposures contain it; per band {'D1': 47, 'D2': 31, 'D3': 44, 'D4': 47, 'D5': 33, 'D6': 44}
+   D1: 17 exposures 2025-08-29T11:50 -> 2025-08-31T11:03 (47.2 h), moves 1968"  V~11.28
+   D1: 6 exposures 2025-09-03T04:18 -> 2025-09-03T10:51 (6.6 h), moves 259"  V~11.237
+   D1: 4 exposures 2026-02-23T02:19 -> 2026-02-23T02:25 (0.1 h), moves 3"  V~11.305
+   D1: 4 exposures 2026-03-01T00:08 -> 2026-03-01T00:15 (0.1 h), moves 3"  V~11.392
+   D1: 4 exposures 2026-03-02T20:05 -> 2026-03-02T20:11 (0.1 h), moves 3"  V~11.418
+   D1: 6 exposures 2026-03-04T19:21 -> 2026-03-05T16:37 (21.3 h), moves 704"  V~11.44468655792851
+   D1: 5 exposures 2026-03-07T09:16 -> 2026-03-07T19:04 (9.8 h), moves 337"  V~11.479
+   D2: 18 exposures 2025-09-04T22:43 -> 2025-09-07T04:28 (53.8 h), moves 2042"  V~11.22
+   D2: 4 exposures 2026-02-22T16:32 -> 2026-02-22T16:39 (0.1 h), moves 3"  V~11.299
+   D2: 4 exposures 2026-02-28T01:19 -> 2026-02-28T01:25 (0.1 h), moves 3"  V~11.379
+   D2: 5 exposures 2026-03-02T02:15 -> 2026-03-03T04:13 (26.0 h), moves 821"  V~11.407018561319811
+   D3: 18 exposures 2025-09-08T08:13 -> 2025-09-10T20:28 (60.3 h), moves 2160"  V~11.186
+   D3: 4 exposures 2025-09-12T05:08 -> 2025-09-12T05:14 (0.1 h), moves 4"  V~11.144
+   D3: 10 exposures 2025-09-17T00:52 -> 2025-09-18T03:04 (26.2 h), moves 800"  V~11.089
+   D3: 6 exposures 2026-02-21T07:58 -> 2026-02-22T13:24 (29.4 h), moves 767"  V~11.278
+   D3: 6 exposures 2026-02-26T23:15 -> 2026-02-28T14:18 (39.0 h), moves 1167"  V~11.363
+   D4: 17 exposures 2025-08-29T11:50 -> 2025-08-31T11:03 (47.2 h), moves 1968"  V~11.28
+   D4: 6 exposures 2025-09-03T04:18 -> 2025-09-03T10:51 (6.6 h), moves 259"  V~11.237
+   D4: 4 exposures 2026-02-23T02:19 -> 2026-02-23T02:25 (0.1 h), moves 3"  V~11.305
+   D4: 4 exposures 2026-03-01T00:08 -> 2026-03-01T00:15 (0.1 h), moves 3"  V~11.392
+   D4: 4 exposures 2026-03-02T20:05 -> 2026-03-02T20:11 (0.1 h), moves 3"  V~11.418
+   D4: 6 exposures 2026-03-04T19:21 -> 2026-03-05T16:37 (21.3 h), moves 704"  V~11.44468655792851
+   D4: 5 exposures 2026-03-07T09:16 -> 2026-03-07T19:04 (9.8 h), moves 337"  V~11.479
+   D5: 19 exposures 2025-09-04T22:43 -> 2025-09-07T04:28 (53.8 h), moves 2042"  V~11.22
+   D5: 4 exposures 2026-02-22T16:32 -> 2026-02-22T16:39 (0.1 h), moves 3"  V~11.299
+   D5: 4 exposures 2026-02-28T01:19 -> 2026-02-28T01:25 (0.1 h), moves 3"  V~11.379
+   D5: 6 exposures 2026-03-02T02:15 -> 2026-03-03T04:13 (26.0 h), moves 821"  V~11.407018559592093
+   D6: 18 exposures 2025-09-08T08:13 -> 2025-09-10T20:28 (60.3 h), moves 2160"  V~11.186
+   D6: 4 exposures 2025-09-12T05:08 -> 2025-09-12T05:14 (0.1 h), moves 4"  V~11.144
+   D6: 10 exposures 2025-09-17T00:52 -> 2025-09-18T03:04 (26.2 h), moves 800"  V~11.089
+   D6: 6 exposures 2026-02-21T07:58 -> 2026-02-22T13:24 (29.4 h), moves 767"  V~11.278
+   D6: 6 exposures 2026-02-26T23:15 -> 2026-02-28T14:18 (39.0 h), moves 1167"  V~11.363
+# 3 Juno (A804 RA): 206 of 2073 6-h steps have elongation (80.0, 100.0)

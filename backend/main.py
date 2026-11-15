@@ -5,6 +5,7 @@ Run locally:  uvicorn backend.main:app --reload   (or ./run.sh)
 from __future__ import annotations
 
 import os
+import re
 import time
 from pathlib import Path
 
@@ -77,33 +78,48 @@ def api_resolve(q: str = Query(..., min_length=1, max_length=120)):
 def api_search(ra: float = RA, dec: float = DEC):
     """Which SPHEREx images cover this position, per band and per visit (dates from archive metadata)."""
     ra, dec = round(ra, 5), round(dec, 5)
-    exposures = _archive(sx.search_exposures, ra, dec)
+    res = _archive(sx.search, ra, dec)
+    exposures, deep = res["exposures"], res["truncated"]
     bands = []
     for det, info in sx.BANDS.items():
         mine = [e for e in exposures if e["detector"] == det]
-        bands.append({"detector": det, **info, "count": len(mine), "visits": len(_visits(mine))})
+        # In a deep field the overview is only a sample, so per-band numbers are not known here.
+        bands.append({"detector": det, **info, "count": None if deep else len(mine), "visits": None if deep else len(_visits(mine))})
     return {
         "ra": ra,
         "dec": dec,
         "total": len(exposures),
+        "deep": deep,
         "bands": bands,
-        "visits": _visits(exposures),
+        "visits": [] if deep else _visits(exposures),
         "collections": list(sx.COLLECTIONS),
+        "failed": res["failed"],
     }
 
 
 @app.get("/api/frames")
 def api_frames(ra: float = RA, dec: float = DEC, band: int = Query(2, ge=1, le=6)):
-    """Every exposure of one band that contains the position: FITS-header date and wavelength there."""
+    """Exposures of one band that contain the position: FITS-header date and wavelength there."""
     ra, dec = round(ra, 5), round(dec, 5)
-    frames = _archive(sx.list_frames, ra, dec, band)
-    return {"ra": ra, "dec": dec, "band": band, "frames": frames}
+    res = _archive(sx.band_exposures, ra, dec, band)
+    frames = _archive(sx.list_frames, ra, dec, band, res["exposures"])
+    return {
+        "ra": ra,
+        "dec": dec,
+        "band": band,
+        "total_in_band": len(res["exposures"]),
+        "deep": res["deep"],
+        "failed": res["failed"],
+        "frames": frames,
+    }
 
 
 def _find_exposure(ra: float, dec: float, frame_id: str) -> dict:
-    for e in _archive(sx.search_exposures, ra, dec):
-        if e["id"] == frame_id:
-            return e
+    m = re.fullmatch(r"[A-Za-z0-9_]{6,36}D([1-6])", frame_id)
+    if m:
+        for e in _archive(sx.band_exposures, ra, dec, int(m.group(1)))["exposures"]:
+            if e["id"] == frame_id:
+                return e
     raise HTTPException(404, "That exposure does not cover this position.")
 
 

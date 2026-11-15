@@ -136,3 +136,20 @@ def test_grid_size_keeps_native_sampling():
     for size in (0.05, 0.1, 0.2, 0.4):
         assert size * 3600 / sx.grid_size(size) <= 6.15  # never coarser than a SPHEREx pixel
     assert math.isclose(sx.grid_size(0.1), 128)
+
+
+def test_sia_votable_light_parser():
+    xml = b"""<VOTABLE><RESOURCE type="results"><TABLE>
+      <FIELD name="s_ra" datatype="double"/><FIELD name="energy_bandpassname" datatype="char" arraysize="*"><DESCRIPTION>x</DESCRIPTION></FIELD>
+      <FIELD name="obs_id" datatype="char"/><FIELD name="access_url" datatype="char"/><FIELD name="t_exptime" datatype="double"/>
+      <FIELD name="t_min" datatype="double" ID="c5"/><FIELD name="note" datatype="char"/>
+      <DATA><TABLEDATA>
+        <TR><TD>1.5</TD><TD>SPHEREx-D3</TD><TD>2026W33_2A_0594_4</TD><TD>https://x/ibe/data/spherex/qr3/a&amp;b.fits</TD><TD>113.5</TD><TD>61268.63</TD><TD/></TR>
+        <TR><TD>2.5</TD><TD>SPHEREx-D6</TD><TD>2026W33_2A_0594_5</TD><TD>https://x/ibe/data/spherex/qr3/c.fits</TD><TD>113.5</TD><TD>61269.5</TD><TD>hi</TD></TR>
+      </TABLEDATA></DATA></TABLE></RESOURCE></VOTABLE>"""
+    rows = sx.parse_sia_votable(xml)
+    assert len(rows) == 2
+    assert rows[0]["obs_id"] == "2026W33_2A_0594_4" and rows[0]["t_min"] == "61268.63"
+    assert rows[0]["access_url"].endswith("a&b.fits") and rows[1]["energy_bandpassname"] == "SPHEREx-D6"
+    with pytest.raises(sx.ArchiveError):
+        sx.parse_sia_votable(b'<VOTABLE><INFO name="QUERY_STATUS" value="ERROR">bad</INFO></VOTABLE>')

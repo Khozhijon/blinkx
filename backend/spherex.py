@@ -14,6 +14,7 @@ URL is used as a fallback. Observation dates always come from the FITS header (D
 from __future__ import annotations
 
 import base64
+import html
 import io
 import json
 import math
@@ -27,13 +28,11 @@ from dataclasses import dataclass
 import httpx
 import numpy as np
 from astropy.io import fits
-from astropy.io.votable import parse_single_table
 from astropy.wcs import WCS, FITSFixedWarning
 
 from . import cache
 
 warnings.simplefilter("ignore", FITSFixedWarning)
-warnings.filterwarnings("ignore", module="astropy.io.votable")
 
 SIA_URL = "https://irsa.ipac.caltech.edu/SIA"
 S3_BASE = "https://nasa-irsa-spherex.s3.amazonaws.com/"
@@ -87,11 +86,11 @@ class ArchiveError(RuntimeError):
     """The archive did not give us what we asked for."""
 
 
-def _get(url: str, *, params=None, headers=None, tries: int = 4) -> httpx.Response:
+def _get(url: str, *, params=None, headers=None, tries: int = 4, timeout: float | None = None) -> httpx.Response:
     last: Exception | None = None
     for attempt in range(tries):
         try:
-            r = client().get(url, params=params, headers=headers)
+            r = client().get(url, params=params, headers=headers, **({"timeout": timeout} if timeout else {}))
             # IRSA answers "Server busy, retry later." with a non-FITS body when overloaded.
             if r.status_code in (200, 206) and not r.content.startswith(b"Server busy"):
                 return r
@@ -116,70 +115,133 @@ def _get_range(key: str, start: int, end: int) -> bytes:
 # --------------------------------------------------------------------------- search
 
 
-def _sia_one(collection: str, ra: float, dec: float) -> list[dict]:
-    r = _get(
-        SIA_URL,
-        params={
-            "COLLECTION": collection,
-            "POS": f"circle {ra:.6f} {dec:.6f} 0.0003",
-            "RESPONSEFORMAT": "votable",
-        },
-    )
-    table = parse_single_table(io.BytesIO(r.content)).to_table(use_names_over_ids=True)
-    out = []
-    for row in table:
-        url = str(row["access_url"])
-        if "/ibe/data/spherex/" not in url:
+_FIELD_RE = re.compile(rb'<FIELD\b[^>]*?\bname="([^"]+)"')
+_TR_RE = re.compile(rb"<TR>(.*?)</TR>", re.S)
+_TD_RE = re.compile(rb"<TD\s*/>|<TD[^>]*>(.*?)</TD>", re.S)
+_SIA_COLUMNS = ("obs_id", "energy_bandpassname", "access_url", "t_min", "t_exptime")
+
+
+def parse_sia_votable(xml: bytes, want: tuple[str, ...] = _SIA_COLUMNS) -> list[dict]:
+    """Pull a few columns out of a TABLEDATA VOTable.
+
+    A deep-field search returns ~8000 rows x 51 columns (18 MB of XML); a general VOTable parser
+    needs a lot of memory for that, which a small free server does not have. This reads only the
+    columns we use.
+    """
+    if b'name="QUERY_STATUS" value="ERROR"' in xml:
+        raise ArchiveError("IRSA reported an error for this search")
+    names = [m.decode() for m in _FIELD_RE.findall(xml)]
+    try:
+        idx = [names.index(w) for w in want]
+    except ValueError as exc:
+        raise ArchiveError(f"IRSA search result is missing a column: {exc}") from exc
+    rows = []
+    for tr in _TR_RE.finditer(xml):
+        cells = _TD_RE.findall(tr.group(1))
+        if len(cells) != len(names):
             continue
-        key = url.split("/ibe/data/spherex/", 1)[1]
-        m = re.search(r"SPHEREx-D(\d)", str(row["energy_bandpassname"]))
-        if not m:
+        rows.append({w: html.unescape(cells[i].decode("utf-8", "replace")).strip() for w, i in zip(want, idx)})
+    return rows
+
+
+MAXREC = 2000  # per collection; ordinary sky has a few hundred rows, only the deep fields overflow
+# A slice of wavelength (microns) that only one detector covers, used to search a single band.
+_BAND_PROBE = {1: (0.90, 0.95), 2: (1.30, 1.40), 3: (2.00, 2.10), 4: (3.00, 3.20), 5: (4.10, 4.20), 6: (4.70, 4.80)}
+
+
+def _sia_one(collection: str, ra: float, dec: float, detector: int | None = None) -> tuple[list[dict], bool]:
+    """One SIA2 query. Returns (rows, overflowed)."""
+    params = {"COLLECTION": collection, "POS": f"circle {ra:.6f} {dec:.6f} 0.0003", "RESPONSEFORMAT": "votable"}
+    if detector is None:
+        params["MAXREC"] = str(MAXREC)
+    else:
+        lo, hi = _BAND_PROBE[detector]
+        params["BAND"] = f"{lo}e-6 {hi}e-6"  # metres
+    r = _get(SIA_URL, params=params, tries=5, timeout=150.0)
+    overflow = b'name="QUERY_STATUS" value="OVERFLOW"' in r.content
+    out = []
+    for row in parse_sia_votable(r.content):
+        url = row["access_url"]
+        m = re.search(r"SPHEREx-D(\d)", row["energy_bandpassname"])
+        if "/ibe/data/spherex/" not in url or not m or not row["t_min"]:
             continue
         det = int(m.group(1))
+        if detector is not None and det != detector:
+            continue
         out.append(
             {
                 "id": f"{row['obs_id']}D{det}",
-                "obs_id": str(row["obs_id"]),
+                "obs_id": row["obs_id"],
                 "detector": det,
                 "collection": collection,
-                "key": key,
+                "key": url.split("/ibe/data/spherex/", 1)[1],
                 "mjd": float(row["t_min"]),
-                "exptime": float(row["t_exptime"]),
+                "exptime": float(row["t_exptime"] or 0.0),
             }
         )
-    return out
+    return out, overflow
 
 
-def search_exposures(ra: float, dec: float) -> list[dict]:
-    """All SPHEREx Level-2 spectral images whose footprint contains (ra, dec), oldest first."""
-    ck = f"sia/{ra:.5f}_{dec:.5f}"
-    hit = cache.get_json(ck, max_age=6 * 3600)
-    if hit is not None:
-        return hit
+def _sia_all(ra: float, dec: float, detector: int | None = None) -> dict:
+    def one(collection):
+        try:
+            return _sia_one(collection, ra, dec, detector)
+        except Exception as exc:  # noqa: BLE001 - one collection failing must not sink the search
+            return exc
+
     with ThreadPoolExecutor(len(COLLECTIONS)) as pool:
-        parts = list(pool.map(lambda c: _safe_sia(c, ra, dec), COLLECTIONS))
-    errors = [p for p in parts if isinstance(p, Exception)]
-    if len(errors) == len(parts):
-        raise ArchiveError(f"IRSA image search failed: {errors[0]}")
-    seen, rows = set(), []
+        parts = list(pool.map(one, COLLECTIONS))
+    failed = [c for c, part in zip(COLLECTIONS, parts) if isinstance(part, Exception)]
+    if len(failed) == len(parts):
+        raise ArchiveError(f"IRSA image search failed: {parts[0]}")
+    seen, rows, truncated = set(), [], False
     for part in parts:
         if isinstance(part, Exception):
             continue
-        for row in part:
+        truncated |= part[1]
+        for row in part[0]:
             if row["id"] not in seen:
                 seen.add(row["id"])
                 rows.append(row)
     rows.sort(key=lambda r: r["mjd"])
-    if not errors:
-        cache.put_json(ck, rows)
-    return rows
+    return {"exposures": rows, "truncated": truncated, "failed": failed}
 
 
-def _safe_sia(collection, ra, dec):
-    try:
-        return _sia_one(collection, ra, dec)
-    except Exception as exc:  # noqa: BLE001 - one collection failing must not sink the search
-        return exc
+def search(ra: float, dec: float) -> dict:
+    """SPHEREx Level-2 spectral images whose footprint contains (ra, dec), oldest first.
+
+    ``truncated`` is True in the deep fields, where a position has tens of thousands of exposures and
+    we stop at MAXREC per collection; ``band_exposures`` then fetches one band completely.
+    ``failed`` lists collections IRSA did not answer for (the result is then incomplete, not cached).
+    """
+    ck = f"sia2/{ra:.5f}_{dec:.5f}"
+    hit = cache.get_json(ck, max_age=6 * 3600)
+    if hit is not None:
+        return hit
+    res = _sia_all(ra, dec)
+    if not res["failed"]:
+        cache.put_json(ck, res)
+    return res
+
+
+def search_exposures(ra: float, dec: float) -> list[dict]:
+    return search(ra, dec)["exposures"]
+
+
+def band_exposures(ra: float, dec: float, detector: int) -> dict:
+    """Every exposure of one detector at this position (complete even in the deep fields)."""
+    base = search(ra, dec)
+    if not base["truncated"]:
+        return {"exposures": [e for e in base["exposures"] if e["detector"] == detector], "failed": base["failed"], "deep": False}
+    ck = f"siaband/{ra:.5f}_{dec:.5f}_D{detector}"
+    hit = cache.get_json(ck, max_age=6 * 3600)
+    if hit is not None:
+        return hit
+    res = _sia_all(ra, dec, detector)
+    out = {"exposures": res["exposures"], "failed": res["failed"], "deep": True}
+    if not res["failed"]:
+        cache.put_json(ck, out)
+    return out
 
 
 # --------------------------------------------------------------------------- headers
@@ -353,14 +415,23 @@ def read_exposure_meta(exp: dict, ra: float, dec: float) -> dict:
     }
 
 
+MAX_LISTED = 240  # deep fields near the ecliptic poles have >1000 exposures per band
+
+
 def list_frames(ra: float, dec: float, detector: int, exposures: list[dict] | None = None) -> list[dict]:
-    """Metadata for every exposure of one detector that really contains the target pixel."""
+    """Metadata for the exposures of one detector that really contain the target pixel.
+
+    Where there are more than MAX_LISTED (the deep fields), an evenly spaced subset in time is used.
+    """
     ck = f"frames/{ra:.5f}_{dec:.5f}_D{detector}"
     hit = cache.get_json(ck, max_age=6 * 3600)
     if hit is not None:
         return hit
-    exposures = exposures if exposures is not None else search_exposures(ra, dec)
+    exposures = exposures if exposures is not None else band_exposures(ra, dec, detector)["exposures"]
     todo = [e for e in exposures if e["detector"] == detector]
+    if len(todo) > MAX_LISTED:
+        step = len(todo) / MAX_LISTED
+        todo = [todo[int(i * step)] for i in range(MAX_LISTED)]
 
     def one(exp):
         try:

@@ -1,0 +1,40 @@
+# ATLAS (C/2025 N1): 87 of 549 6-h steps have elongation (80.0, 100.0)
+# SIA error spherex_dr1 mjd=60904.50: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60904.75: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60908.25: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60908.75: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60910.50: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60910.75: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60911.50: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60912.00: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60912.50: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60913.50: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=60914.25: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+#   50/87 SIA windows, 0 exposures so far
+# SIA error spherex_dr1 mjd=61017.50: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=61017.75: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=61019.00: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=61024.75: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# ATLAS (C/2025 N1): 104 exposures near the track, checking WCS...
+== ATLAS (C/2025 N1): 92 exposures contain it; per band {'D1': 12, 'D2': 17, 'D3': 17, 'D4': 12, 'D5': 17, 'D6': 17}
+   D1: 12 exposures 2025-12-08T00:06 -> 2025-12-08T03:28 (3.4 h), moves 540"  V~15.349543578028483
+   D2: 4 exposures 2025-12-09T11:54 -> 2025-12-09T12:01 (0.1 h), moves 18"  V~15.401
+   D2: 13 exposures 2025-12-14T04:26 -> 2025-12-14T20:43 (16.3 h), moves 2855"  V~15.569572949627801
+   D3: 17 exposures 2025-12-14T10:58 -> 2025-12-14T23:59 (13.0 h), moves 2288"  V~15.58
+   D4: 12 exposures 2025-12-08T00:06 -> 2025-12-08T03:28 (3.4 h), moves 540"  V~15.349543578028483
+   D5: 4 exposures 2025-12-09T11:54 -> 2025-12-09T12:01 (0.1 h), moves 18"  V~15.401
+   D5: 13 exposures 2025-12-14T04:26 -> 2025-12-14T20:43 (16.3 h), moves 2855"  V~15.569572949627801
+   D6: 17 exposures 2025-12-14T10:58 -> 2025-12-14T23:59 (13.0 h), moves 2288"  V~15.58
+# SWAN (C/2025 R2): 24 of 69 6-h steps have elongation (80.0, 100.0)
+# SIA error spherex_dr1 mjd=60971.25: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SWAN (C/2025 R2): 2 exposures near the track, checking WCS...
+== SWAN (C/2025 R2): 0 exposures contain it; per band {}
+# 24P/Schaumasse: 281 of 281 6-h steps have elongation (80.0, 100.0)
+# SIA error spherex_dr1 mjd=61010.00: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=61014.75: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=61016.00: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=61018.75: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+#   50/281 SIA windows, 2 exposures so far
+# SIA error spherex_dr1 mjd=61034.00: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+# SIA error spherex_dr1 mjd=61034.75: HTTP 502 from https://irsa.ipac.caltech.edu/SIA: '<!DOCTYPE HTML PUBLIC "-//IETF
+#   100/281 SIA windows, 116 exposures so far

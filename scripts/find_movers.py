@@ -27,6 +27,7 @@ import io
 import json
 import re
 import sys
+import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -172,12 +173,18 @@ def find_hits(command: str, start: str = SURVEY_START, stop: str = SURVEY_STOP, 
             # DR1 holds the first survey year, QR3 the following quarter; skip the impossible half.
             if (coll == "spherex_dr1" and mjd > DR1_LAST_MJD) or (coll == "spherex_qr3" and mjd < QR3_FIRST_MJD):
                 continue
-            try:
-                # A tiny search radius keeps IRSA fast; the detector is 3.5 deg wide, so an image that
-                # holds the object within +-3 h almost always also holds this exact point.
-                found += sia_time(coll, ra, dec, 0.02, mjd - 0.135, mjd + 0.135)
-            except Exception as exc:  # noqa: BLE001
-                print(f"# SIA error {coll} mjd={mjd:.2f}: {str(exc)[:80]}", file=sys.stderr)
+            # A tiny search radius keeps IRSA fast; the detector is 3.5 deg wide, so an image that
+            # holds the object within +-3 h almost always also holds this exact point.
+            # IRSA's SIA front end intermittently answers "502 Proxy Error"; be patient and retry.
+            for attempt in range(5):
+                try:
+                    found += sia_time(coll, ra, dec, 0.02, mjd - 0.135, mjd + 0.135)
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    if attempt == 4:
+                        print(f"# SIA error {coll} mjd={mjd:.2f}: {str(exc)[:80]}", file=sys.stderr)
+                    else:
+                        time.sleep(3.0 * (attempt + 1))
         return found
 
     with ThreadPoolExecutor(4) as pool:

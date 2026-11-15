@@ -1,0 +1,579 @@
+[
+ {
+  "slug": "vesta",
+  "title": "Asteroid (4) Vesta crossing a star field",
+  "kind": "asteroid",
+  "object": "4 Vesta (A807 FA)",
+  "horizons_command": "4;",
+  "ra": 23.37261,
+  "dec": 1.50344,
+  "size_deg": 0.15,
+  "band": 2,
+  "frames": [
+   "2026W29_2A_0062_1D2",
+   "2026W29_2A_0062_2D2",
+   "2026W29_2A_0062_3D2",
+   "2026W29_2A_0062_4D2",
+   "2026W29_2A_0088_1D2",
+   "2026W29_2A_0088_2D2",
+   "2026W29_2A_0088_3D2",
+   "2026W29_2A_0143_1D2",
+   "2026W29_2A_0143_2D2",
+   "2026W29_2A_0143_3D2",
+   "2026W29_2A_0143_4D2"
+  ],
+  "predicted": {
+   "2026W29_2A_0062_1D2": [
+    23.322188,
+    1.495587
+   ],
+   "2026W29_2A_0062_2D2": [
+    23.322553,
+    1.495645
+   ],
+   "2026W29_2A_0062_3D2": [
+    23.322918,
+    1.495702
+   ],
+   "2026W29_2A_0062_4D2": [
+    23.323284,
+    1.495758
+   ],
+   "2026W29_2A_0088_1D2": [
+    23.355624,
+    1.500816
+   ],
+   "2026W29_2A_0088_2D2": [
+    23.355987,
+    1.500874
+   ],
+   "2026W29_2A_0088_3D2": [
+    23.35635,
+    1.500932
+   ],
+   "2026W29_2A_0143_1D2": [
+    23.42194,
+    1.511114
+   ],
+   "2026W29_2A_0143_2D2": [
+    23.422303,
+    1.511172
+   ],
+   "2026W29_2A_0143_3D2": [
+    23.422666,
+    1.51123
+   ],
+   "2026W29_2A_0143_4D2": [
+    23.423029,
+    1.511287
+   ]
+  },
+  "dates": {
+   "2026W29_2A_0062_1D2": "2026-07-16T18:45:58.074",
+   "2026W29_2A_0062_2D2": "2026-07-16T18:48:07.005",
+   "2026W29_2A_0062_3D2": "2026-07-16T18:50:15.936",
+   "2026W29_2A_0062_4D2": "2026-07-16T18:52:24.867",
+   "2026W29_2A_0088_1D2": "2026-07-16T22:02:36.780",
+   "2026W29_2A_0088_2D2": "2026-07-16T22:04:45.712",
+   "2026W29_2A_0088_3D2": "2026-07-16T22:06:54.642",
+   "2026W29_2A_0143_1D2": "2026-07-17T04:34:00.610",
+   "2026W29_2A_0143_2D2": "2026-07-17T04:36:09.540",
+   "2026W29_2A_0143_3D2": "2026-07-17T04:38:18.471",
+   "2026W29_2A_0143_4D2": "2026-07-17T04:40:27.403"
+  },
+  "motion_arcsec_per_hour": 37.1,
+  "total_motion_arcsec": 367.3,
+  "span_hours": 9.91,
+  "vmag": 7.7,
+  "vmag_source": "JPL Horizons apparent V magnitude",
+  "evidence": [
+   {
+    "id": "2026W29_2A_0062_1D2",
+    "peak_sigma_here": 59983.6,
+    "peak_sigma_same_spot_other_frames": 1.4
+   },
+   {
+    "id": "2026W29_2A_0062_2D2",
+    "peak_sigma_here": 51976.8,
+    "peak_sigma_same_spot_other_frames": 1.4
+   },
+   {
+    "id": "2026W29_2A_0062_3D2",
+    "peak_sigma_here": 35533.4,
+    "peak_sigma_same_spot_other_frames": 1.4
+   },
+   {
+    "id": "2026W29_2A_0062_4D2",
+    "peak_sigma_here": 97310.7,
+    "peak_sigma_same_spot_other_frames": 1.2
+   },
+   {
+    "id": "2026W29_2A_0088_1D2",
+    "peak_sigma_here": 53481.9,
+    "peak_sigma_same_spot_other_frames": 2.6
+   },
+   {
+    "id": "2026W29_2A_0088_2D2",
+    "peak_sigma_here": 50338.6,
+    "peak_sigma_same_spot_other_frames": 2.6
+   },
+   {
+    "id": "2026W29_2A_0088_3D2",
+    "peak_sigma_here": 39511.3,
+    "peak_sigma_same_spot_other_frames": 2.6
+   },
+   {
+    "id": "2026W29_2A_0143_1D2",
+    "peak_sigma_here": 45742.9,
+    "peak_sigma_same_spot_other_frames": 102.7
+   },
+   {
+    "id": "2026W29_2A_0143_2D2",
+    "peak_sigma_here": 63877.7,
+    "peak_sigma_same_spot_other_frames": 102.7
+   },
+   {
+    "id": "2026W29_2A_0143_3D2",
+    "peak_sigma_here": 35275.5,
+    "peak_sigma_same_spot_other_frames": 87.5
+   },
+   {
+    "id": "2026W29_2A_0143_4D2",
+    "peak_sigma_here": 60547.3,
+    "peak_sigma_same_spot_other_frames": 70.2
+   }
+  ],
+  "contact_sheet": "spike/out/mover_vesta.png",
+  "notes": "Brightest asteroid in the sky. Three visits about 3 h and 6.5 h apart; within each visit the four exposures are 2 min apart, so Vesta barely moves inside a visit and jumps between visits."
+ },
+ {
+  "slug": "3i-atlas",
+  "title": "Interstellar comet 3I/ATLAS streaking past the stars",
+  "kind": "comet",
+  "object": "ATLAS (C/2025 N1)",
+  "horizons_command": "DES=C/2025 N1;",
+  "ra": 167.20181,
+  "dec": 5.1485,
+  "size_deg": 0.2,
+  "band": 2,
+  "frames": [
+   "2025W50_2A_0685_1D2",
+   "2025W50_2A_0685_2D2",
+   "2025W50_2A_0685_3D2",
+   "2025W50_2A_0685_4D2",
+   "2025W50_2A_0698_1D2",
+   "2025W50_2A_0698_2D2",
+   "2025W50_2A_0698_3D2",
+   "2025W50_2A_0698_4D2",
+   "2025W50_2A_0712_1D2",
+   "2025W50_2A_0712_2D2",
+   "2025W50_2A_0712_3D2",
+   "2025W50_2A_0712_4D2"
+  ],
+  "predicted": {
+   "2025W50_2A_0685_1D2": [
+    167.278401,
+    5.12181
+   ],
+   "2025W50_2A_0685_2D2": [
+    167.276755,
+    5.122384
+   ],
+   "2025W50_2A_0685_3D2": [
+    167.275109,
+    5.122957
+   ],
+   "2025W50_2A_0685_4D2": [
+    167.273461,
+    5.123531
+   ],
+   "2025W50_2A_0698_1D2": [
+    167.205984,
+    5.14705
+   ],
+   "2025W50_2A_0698_2D2": [
+    167.204336,
+    5.147624
+   ],
+   "2025W50_2A_0698_3D2": [
+    167.202688,
+    5.148198
+   ],
+   "2025W50_2A_0698_4D2": [
+    167.20104,
+    5.148771
+   ],
+   "2025W50_2A_0712_1D2": [
+    167.130169,
+    5.173461
+   ],
+   "2025W50_2A_0712_2D2": [
+    167.128518,
+    5.174037
+   ],
+   "2025W50_2A_0712_3D2": [
+    167.126868,
+    5.174613
+   ],
+   "2025W50_2A_0712_4D2": [
+    167.125218,
+    5.175189
+   ]
+  },
+  "dates": {
+   "2025W50_2A_0685_1D2": "2025-12-14T04:26:46.211",
+   "2025W50_2A_0685_2D2": "2025-12-14T04:28:55.142",
+   "2025W50_2A_0685_3D2": "2025-12-14T04:31:04.072",
+   "2025W50_2A_0685_4D2": "2025-12-14T04:33:13.004",
+   "2025W50_2A_0698_1D2": "2025-12-14T06:01:11.491",
+   "2025W50_2A_0698_2D2": "2025-12-14T06:03:20.421",
+   "2025W50_2A_0698_3D2": "2025-12-14T06:05:29.353",
+   "2025W50_2A_0698_4D2": "2025-12-14T06:07:38.283",
+   "2025W50_2A_0712_1D2": "2025-12-14T07:39:57.703",
+   "2025W50_2A_0712_2D2": "2025-12-14T07:42:06.635",
+   "2025W50_2A_0712_3D2": "2025-12-14T07:44:15.565",
+   "2025W50_2A_0712_4D2": "2025-12-14T07:46:24.496"
+  },
+  "motion_arcsec_per_hour": 174.9,
+  "total_motion_arcsec": 581.9,
+  "span_hours": 3.33,
+  "vmag": 15.6,
+  "vmag_source": "JPL Horizons T-mag (predicted total magnitude)",
+  "evidence": [
+   {
+    "id": "2025W50_2A_0685_1D2",
+    "peak_sigma_here": 376.7,
+    "peak_sigma_same_spot_other_frames": 1.7
+   },
+   {
+    "id": "2025W50_2A_0685_2D2",
+    "peak_sigma_here": 430.0,
+    "peak_sigma_same_spot_other_frames": 1.7
+   },
+   {
+    "id": "2025W50_2A_0685_3D2",
+    "peak_sigma_here": 398.5,
+    "peak_sigma_same_spot_other_frames": 1.8
+   },
+   {
+    "id": "2025W50_2A_0685_4D2",
+    "peak_sigma_here": 384.8,
+    "peak_sigma_same_spot_other_frames": 1.8
+   },
+   {
+    "id": "2025W50_2A_0698_1D2",
+    "peak_sigma_here": 385.7,
+    "peak_sigma_same_spot_other_frames": 2.0
+   },
+   {
+    "id": "2025W50_2A_0698_2D2",
+    "peak_sigma_here": 470.8,
+    "peak_sigma_same_spot_other_frames": 2.0
+   },
+   {
+    "id": "2025W50_2A_0698_3D2",
+    "peak_sigma_here": 377.8,
+    "peak_sigma_same_spot_other_frames": 2.0
+   },
+   {
+    "id": "2025W50_2A_0698_4D2",
+    "peak_sigma_here": 392.1,
+    "peak_sigma_same_spot_other_frames": 1.9
+   },
+   {
+    "id": "2025W50_2A_0712_1D2",
+    "peak_sigma_here": 410.7,
+    "peak_sigma_same_spot_other_frames": 1.8
+   },
+   {
+    "id": "2025W50_2A_0712_2D2",
+    "peak_sigma_here": 411.7,
+    "peak_sigma_same_spot_other_frames": 2.0
+   },
+   {
+    "id": "2025W50_2A_0712_3D2",
+    "peak_sigma_here": 399.4,
+    "peak_sigma_same_spot_other_frames": 1.7
+   },
+   {
+    "id": "2025W50_2A_0712_4D2",
+    "peak_sigma_here": 410.7,
+    "peak_sigma_same_spot_other_frames": 1.6
+   }
+  ],
+  "contact_sheet": "spike/out/mover_3i-atlas.png",
+  "notes": "Third known interstellar object, five days before its closest approach to Earth. Fuzzy coma with a faint extension towards the east (left); three visits one SPHEREx orbit (about 97 min) apart. It moves about 6 arcsec (one SPHEREx pixel) even between exposures 2 min apart."
+ },
+ {
+  "slug": "3i-atlas-co2",
+  "title": "3I/ATLAS lights up in carbon dioxide (4.26 \u00b5m)",
+  "kind": "comet",
+  "object": "ATLAS (C/2025 N1)",
+  "horizons_command": "DES=C/2025 N1;",
+  "ra": 167.20181,
+  "dec": 5.1485,
+  "size_deg": 0.2,
+  "band": 5,
+  "frames": [
+   "2025W50_2A_0685_1D5",
+   "2025W50_2A_0685_2D5",
+   "2025W50_2A_0685_3D5",
+   "2025W50_2A_0685_4D5",
+   "2025W50_2A_0698_1D5",
+   "2025W50_2A_0698_2D5",
+   "2025W50_2A_0698_3D5",
+   "2025W50_2A_0698_4D5",
+   "2025W50_2A_0712_1D5",
+   "2025W50_2A_0712_2D5",
+   "2025W50_2A_0712_3D5",
+   "2025W50_2A_0712_4D5"
+  ],
+  "predicted": {
+   "2025W50_2A_0685_1D5": [
+    167.278401,
+    5.12181
+   ],
+   "2025W50_2A_0685_2D5": [
+    167.276755,
+    5.122384
+   ],
+   "2025W50_2A_0685_3D5": [
+    167.275109,
+    5.122957
+   ],
+   "2025W50_2A_0685_4D5": [
+    167.273461,
+    5.123531
+   ],
+   "2025W50_2A_0698_1D5": [
+    167.205984,
+    5.14705
+   ],
+   "2025W50_2A_0698_2D5": [
+    167.204336,
+    5.147624
+   ],
+   "2025W50_2A_0698_3D5": [
+    167.202688,
+    5.148198
+   ],
+   "2025W50_2A_0698_4D5": [
+    167.20104,
+    5.148771
+   ],
+   "2025W50_2A_0712_1D5": [
+    167.130169,
+    5.173461
+   ],
+   "2025W50_2A_0712_2D5": [
+    167.128518,
+    5.174037
+   ],
+   "2025W50_2A_0712_3D5": [
+    167.126868,
+    5.174613
+   ],
+   "2025W50_2A_0712_4D5": [
+    167.125218,
+    5.175189
+   ]
+  },
+  "dates": {
+   "2025W50_2A_0685_1D5": "2025-12-14T04:26:46.211",
+   "2025W50_2A_0685_2D5": "2025-12-14T04:28:55.142",
+   "2025W50_2A_0685_3D5": "2025-12-14T04:31:04.072",
+   "2025W50_2A_0685_4D5": "2025-12-14T04:33:13.004",
+   "2025W50_2A_0698_1D5": "2025-12-14T06:01:11.490",
+   "2025W50_2A_0698_2D5": "2025-12-14T06:03:20.422",
+   "2025W50_2A_0698_3D5": "2025-12-14T06:05:29.353",
+   "2025W50_2A_0698_4D5": "2025-12-14T06:07:38.283",
+   "2025W50_2A_0712_1D5": "2025-12-14T07:39:57.704",
+   "2025W50_2A_0712_2D5": "2025-12-14T07:42:06.635",
+   "2025W50_2A_0712_3D5": "2025-12-14T07:44:15.566",
+   "2025W50_2A_0712_4D5": "2025-12-14T07:46:24.496"
+  },
+  "motion_arcsec_per_hour": 174.9,
+  "total_motion_arcsec": 581.9,
+  "span_hours": 3.33,
+  "vmag": 15.6,
+  "vmag_source": "JPL Horizons T-mag (predicted total magnitude)",
+  "evidence": [
+   {
+    "id": "2025W50_2A_0685_1D5",
+    "peak_sigma_here": 38.2,
+    "peak_sigma_same_spot_other_frames": 1.1
+   },
+   {
+    "id": "2025W50_2A_0685_2D5",
+    "peak_sigma_here": 40.4,
+    "peak_sigma_same_spot_other_frames": 1.1
+   },
+   {
+    "id": "2025W50_2A_0685_3D5",
+    "peak_sigma_here": 35.1,
+    "peak_sigma_same_spot_other_frames": 1.7
+   },
+   {
+    "id": "2025W50_2A_0685_4D5",
+    "peak_sigma_here": 42.3,
+    "peak_sigma_same_spot_other_frames": 1.4
+   },
+   {
+    "id": "2025W50_2A_0698_1D5",
+    "peak_sigma_here": 33.4,
+    "peak_sigma_same_spot_other_frames": 2.4
+   },
+   {
+    "id": "2025W50_2A_0698_2D5",
+    "peak_sigma_here": 40.0,
+    "peak_sigma_same_spot_other_frames": 1.9
+   },
+   {
+    "id": "2025W50_2A_0698_3D5",
+    "peak_sigma_here": 25.0,
+    "peak_sigma_same_spot_other_frames": 1.7
+   },
+   {
+    "id": "2025W50_2A_0698_4D5",
+    "peak_sigma_here": 72.4,
+    "peak_sigma_same_spot_other_frames": 1.7
+   },
+   {
+    "id": "2025W50_2A_0712_1D5",
+    "peak_sigma_here": 1617.8,
+    "peak_sigma_same_spot_other_frames": 2.0
+   },
+   {
+    "id": "2025W50_2A_0712_2D5",
+    "peak_sigma_here": 919.1,
+    "peak_sigma_same_spot_other_frames": 2.0
+   },
+   {
+    "id": "2025W50_2A_0712_3D5",
+    "peak_sigma_here": 106.5,
+    "peak_sigma_same_spot_other_frames": 1.8
+   },
+   {
+    "id": "2025W50_2A_0712_4D5",
+    "peak_sigma_here": 40.3,
+    "peak_sigma_same_spot_other_frames": 1.6
+   }
+  ],
+  "contact_sheet": "spike/out/mover_3i-atlas-co2.png",
+  "notes": "Same twelve exposures as the D2 field, seen by detector 5. Each exposure samples a different wavelength at the comet; it is a faint dot at 3.96-4.18 um and a huge glowing coma at 4.21-4.32 um, the CO2 emission band. The brightness change here is colour, not time."
+ },
+ {
+  "slug": "psyche",
+  "title": "Spot the asteroid: (16) Psyche among the stars of Taurus",
+  "kind": "asteroid",
+  "object": "16 Psyche (A852 FA)",
+  "horizons_command": "16;",
+  "ra": 76.27962,
+  "dec": 19.48932,
+  "size_deg": 0.1,
+  "band": 3,
+  "frames": [
+   "2025W37_1A_0263_1D3",
+   "2025W37_1A_0263_2D3",
+   "2025W37_1A_0263_3D3",
+   "2025W37_1A_0301_4D3",
+   "2025W37_1A_0313_1D3",
+   "2025W37_1A_0313_2D3",
+   "2025W37_1A_0313_3D3",
+   "2025W37_1A_0313_4D3"
+  ],
+  "predicted": {
+   "2025W37_1A_0263_1D3": [
+    76.244827,
+    19.488835
+   ],
+   "2025W37_1A_0263_2D3": [
+    76.245208,
+    19.488841
+   ],
+   "2025W37_1A_0263_3D3": [
+    76.245588,
+    19.488845
+   ],
+   "2025W37_1A_0301_4D3": [
+    76.296686,
+    19.489553
+   ],
+   "2025W37_1A_0313_1D3": [
+    76.313283,
+    19.489777
+   ],
+   "2025W37_1A_0313_2D3": [
+    76.313661,
+    19.489784
+   ],
+   "2025W37_1A_0313_3D3": [
+    76.31404,
+    19.48979
+   ],
+   "2025W37_1A_0313_4D3": [
+    76.314418,
+    19.489795
+   ]
+  },
+  "dates": {
+   "2025W37_1A_0263_1D3": "2025-09-09T07:03:13.095",
+   "2025W37_1A_0263_2D3": "2025-09-09T07:05:22.026",
+   "2025W37_1A_0263_3D3": "2025-09-09T07:07:30.956",
+   "2025W37_1A_0301_4D3": "2025-09-09T11:56:42.894",
+   "2025W37_1A_0313_1D3": "2025-09-09T13:30:51.291",
+   "2025W37_1A_0313_2D3": "2025-09-09T13:33:00.221",
+   "2025W37_1A_0313_3D3": "2025-09-09T13:35:09.152",
+   "2025W37_1A_0313_4D3": "2025-09-09T13:37:18.083"
+  },
+  "motion_arcsec_per_hour": 36.0,
+  "total_motion_arcsec": 236.2,
+  "span_hours": 6.57,
+  "vmag": 11.2,
+  "vmag_source": "JPL Horizons apparent V magnitude",
+  "evidence": [
+   {
+    "id": "2025W37_1A_0263_1D3",
+    "peak_sigma_here": 7423.6,
+    "peak_sigma_same_spot_other_frames": 44.1
+   },
+   {
+    "id": "2025W37_1A_0263_2D3",
+    "peak_sigma_here": 5179.0,
+    "peak_sigma_same_spot_other_frames": 12.1
+   },
+   {
+    "id": "2025W37_1A_0263_3D3",
+    "peak_sigma_here": 5400.2,
+    "peak_sigma_same_spot_other_frames": 11.1
+   },
+   {
+    "id": "2025W37_1A_0301_4D3",
+    "peak_sigma_here": 6107.2,
+    "peak_sigma_same_spot_other_frames": 2.1
+   },
+   {
+    "id": "2025W37_1A_0313_1D3",
+    "peak_sigma_here": 1157.2,
+    "peak_sigma_same_spot_other_frames": 26.9
+   },
+   {
+    "id": "2025W37_1A_0313_2D3",
+    "peak_sigma_here": 6089.8,
+    "peak_sigma_same_spot_other_frames": 27.6
+   },
+   {
+    "id": "2025W37_1A_0313_3D3",
+    "peak_sigma_here": 4214.3,
+    "peak_sigma_same_spot_other_frames": 27.6
+   },
+   {
+    "id": "2025W37_1A_0313_4D3",
+    "peak_sigma_here": 4206.4,
+    "peak_sigma_same_spot_other_frames": 27.6
+   }
+  ],
+  "contact_sheet": "spike/out/mover_psyche.png",
+  "notes": "Metal-rich asteroid and target of NASA's Psyche mission, magnitude 11: it looks exactly like a star until you blink the frames. Three visits over 6.6 h (07:03-07:07, 11:56, 13:30-13:37 UTC); in the first visit it sits right beside a field star."
+ }
+]
