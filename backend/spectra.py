@@ -22,7 +22,7 @@ import numpy as np
 from . import cache, detect, spherex as sx
 
 SIZE = 0.05  # degrees: a 3 arcminute cutout is plenty for one object and quick to read
-PER_BAND = 24
+PER_BAND = 18  # exposures read per colour band: about a hundred in all
 VISIT_GAP_DAYS = 20.0
 MAX_SPAN_DAYS = 30.0  # near the ecliptic poles SPHEREx never stops looking: there, take the best month
 SWAMPED_MJY = 1000.0  # a star this bright fills the measuring circle, whatever its overloaded middle does to the centre found for it
@@ -57,12 +57,12 @@ def _median(a: np.ndarray) -> float:
 def full_spectrum(ra: float, dec: float, pm_e: float = 0.0, pm_n: float = 0.0, t0: float | None = None, snap: bool = False) -> dict:
     """``snap``: the spot was pointed at by hand, so first move it onto the nearest source (at most one
     SPHEREx pixel away) and say so in the answer."""
-    ck = f"fullspec10/{ra:.5f}_{dec:.5f}_{pm_e:.2f}_{pm_n:.2f}_{0 if t0 is None else round(t0)}_{int(bool(snap))}"
+    ck = f"fullspec11/{ra:.5f}_{dec:.5f}_{pm_e:.2f}_{pm_n:.2f}_{0 if t0 is None else round(t0)}_{int(bool(snap))}"
     hit = cache.get_json(ck, max_age=7 * 86400)
     if hit is not None:
         return hit
-    listed = {det: sx.list_frames(ra, dec, det) for det in sx.BANDS}
-    every = sorted((f for fs in listed.values() for f in fs if f.get("wavelength_um")), key=lambda f: f["mjd"])
+    # every exposure whose footprint covers the spot, from the archive's list: no file is opened for this
+    every = sorted((e for det in sx.BANDS for e in sx.band_exposures(ra, dec, det)["exposures"] if e.get("mjd")), key=lambda e: e["mjd"])
     if len(every) < 12:
         return {"points": [], "hint": "SPHEREx has too few exposures of this spot for a spectrum."}
     # one visit: the one that covers the most bands, then has the most exposures we would use, then the latest
@@ -74,25 +74,40 @@ def full_spectrum(ra: float, dec: float, pm_e: float = 0.0, pm_n: float = 0.0, t
         cur.append(f)
     visits.append(cur)
     visit = max((_best_month(v) for v in visits), key=_coverage)
-    lo, hi = visit[0]["mjd"], visit[-1]["mjd"]
-    if t0 is None:
-        t0 = 0.5 * (lo + hi)
-    exposures = {e["id"]: e for e in sx.search_exposures(ra, dec)}
     chosen: dict[int, list[dict]] = {}
     for det in sx.BANDS:
-        fs = sorted((f for f in visit if f["detector"] == det and f["id"] in exposures), key=lambda f: f["wavelength_um"])
+        fs = [f for f in visit if f["detector"] == det]  # in time order: within a visit the spot sweeps steadily through the band's colours
         if len(fs) > PER_BAND:
             step = len(fs) / PER_BAND
             fs = [fs[int(i * step)] for i in range(PER_BAND)]
         chosen[det] = fs
     flat = [f for fs in chosen.values() for f in fs]
+    errors = []
+
+    def cut(exp):
+        try:
+            return sx.get_frame(exp, ra, dec, SIZE)
+        except Exception as exc:  # noqa: BLE001 - one unreadable file must not cost the whole spectrum
+            if not (exp.get("approx") and ("HTTP 404" in str(exc) or "HTTP 403" in str(exc))):  # a file the pointing record only guessed at
+                errors.append(exc)
+            return None
+
     with ThreadPoolExecutor(8) as pool:
-        encoded = list(pool.map(lambda f: sx.get_frame(exposures[f["id"]], ra, dec, SIZE), flat))
-    by_id = {f["id"]: e for f, e in zip(flat, encoded)}
+        encoded = list(pool.map(cut, flat))
+    by_id = {f["id"]: e for f, e in zip(flat, encoded) if e is not None and e.get("wavelength_um") and e.get("coverage", 0) >= 0.6}
+    if len(by_id) < 6 and errors:
+        raise errors[0]  # the archive is not answering: say so instead of drawing an empty chart
+    used = [e for e in by_id.values()]
+    if used:
+        lo, hi = min(e["mjd"] for e in used), max(e["mjd"] for e in used)
+    else:
+        lo, hi = visit[0]["mjd"], visit[-1]["mjd"]
+    if t0 is None:
+        t0 = 0.5 * (visit[0]["mjd"] + visit[-1]["mjd"])
 
     loaded = {}  # band -> (its exposures, their pictures, the pictures added together)
     for det, fs in chosen.items():
-        good = [(f, by_id[f["id"]]) for f in fs if by_id[f["id"]]["coverage"] >= 0.6]
+        good = [(f, by_id[f["id"]]) for f in fs if f["id"] in by_id]
         if good:
             frames = detect.frames_from_encoded([e for _, e in good], sx.decode_frame)
             loaded[det] = (good, frames, detect._stack(frames, list(range(len(frames)))) if len(frames) >= 3 else None)
@@ -143,7 +158,8 @@ def full_spectrum(ra: float, dec: float, pm_e: float = 0.0, pm_n: float = 0.0, t
             on_spot = hits >= max(1, len(frames) // 2)
         by_frame = {fr.id: fr for fr in frames}  # frames_from_encoded returns them in time order, not ours
         got = []
-        for f, _ in good:
+        for f, enc in good:
+            f = {"id": f["id"], "wavelength_um": enc["wavelength_um"]}
             fr = by_frame[f["id"]]
             x, y = (float(v) for v in detect.sky_to_pix(*_where(ora, odec, pm_e, pm_n, t0, fr.mjd), ra, dec, SIZE, n))
             v = float(detect.forced_flux(fr, np.array([x]), np.array([y]))[0])

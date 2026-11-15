@@ -128,9 +128,10 @@ same wavelength are combined first, so a change with time is not read as colour
 **The full spectrum, on the fly.** During one visit a spot of sky crosses all six SPHEREx detectors,
 so one visit's exposures hold its whole 0.75–5.0 µm spectrum (the "102 colours"), taken within a
 couple of weeks. `backend/spectra.py` picks the visit that covers the most bands (in the deep fields
-near the ecliptic poles, where SPHEREx never stops looking, the best month), reads up to 24
-exposures per band spread evenly in wavelength, and sums the light in a 9.2″ circle on the spot in
-each (`GET /api/spectrum?ra=…&dec=…`, about half a minute). Three rules keep it honest:
+near the ecliptic poles, where SPHEREx never stops looking, the best month), reads up to 18
+exposures per band, and sums the light in a 9.2″ circle on the spot in each
+(`GET /api/spectrum?ra=…&dec=…`: about half a minute on a laptop, longer on the small free server;
+the answer is then remembered, and the saved examples carry theirs). Three rules keep it honest:
 
 - A band counts as the object's only if, in that band's exposures added together, a source sits
   on the expected spot. Otherwise its dots are drawn hollow and the text says whose light they

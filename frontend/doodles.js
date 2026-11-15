@@ -288,7 +288,13 @@
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Brightness of this object from 0.75 to 5 micrometres, ${pts.length} measurements">${g}</svg>`;
   }
   const FULL_HEAD = `Full spectrum · 0.75 to 5 <span class="asis">µm</span>, all six colour bands`;
-  const WAITING = `<p class="spec-hint" id="fullSpecWait"><span class="spinner small"></span>Measuring… Blink X is reading about a hundred exposures from NASA's archive. Allow up to a minute.</p>`;
+  const WAITING = `<p class="spec-hint" id="fullSpecWait"><span class="spinner small"></span>Measuring…<span class="mono" id="fullSpecSecs"></span> Blink X is reading about a hundred exposures from NASA's archive. The first time, this takes a minute or two.</p>`;
+  let waitClock = null;
+  /** Count the seconds next to "Measuring…", so a slow archive does not look like a stuck page. */
+  function startWaitClock() {
+    const from = Date.now(); clearInterval(waitClock);
+    waitClock = setInterval(() => { const el = $("fullSpecSecs"); if (el) el.textContent = ` ${Math.round((Date.now() - from) / 1000)} s.`; else if (Date.now() - from > 400000) clearInterval(waitClock); }, 1000);
+  }
   /** A measured spectrum: the chart, a plain reading of it, how it was made, and the numbers to take away. */
   function fullSpecBody(sp, color, changes) {
     if (!sp.points || !sp.points.length) return `<p class="spec-hint">${esc(sp.hint || "No spectrum could be measured here.")}</p>`;
@@ -325,7 +331,7 @@
     const head = `<section class="spectrum fullspec" id="fullSpec" style="--c:${color}"><h3>${FULL_HEAD}</h3>`;
     if (measuring.has(d)) return head + WAITING + `</section>`;
     if (!sp) return head + `<p class="spec-hint">The chart further down shows one colour band. SPHEREx photographs the same spot in five more.</p>` +
-      `<div class="actions"><button class="btn" type="button" id="fullSpecBtn">Measure the full spectrum</button></div><p class="muted" id="fullSpecNote">Reads about a hundred exposures from NASA's archive: allow up to a minute.</p></section>`;
+      `<div class="actions"><button class="btn" type="button" id="fullSpecBtn">Measure the full spectrum</button></div><p class="muted" id="fullSpecNote">Reads about a hundred exposures from NASA's archive: allow a minute or two.</p></section>`;
     return head + fullSpecBody(sp, color, d.type === "pulse") + `</section>`;
   }
   async function measureFullSpectrum(d, color) {
@@ -337,7 +343,7 @@
       q.set("pm_e", (m.rate_arcsec_per_year * Math.sin(pa)).toFixed(2)); q.set("pm_n", (m.rate_arcsec_per_year * Math.cos(pa)).toFixed(2));
     } else { q.set("ra", first.ra.toFixed(5)); q.set("dec", first.dec.toFixed(5)); }
     const redraw = () => { const el = $("fullSpec"); if (el && st.pickedDoodle === d.id) { el.outerHTML = fullSpectrumBlock(d, color); wireFullSpec(d.full_spectrum, nameOf(d)); if ($("fullSpecBtn")) $("fullSpecBtn").addEventListener("click", () => measureFullSpectrum(d, color)); } };
-    measuring.add(d); redraw();
+    measuring.add(d); redraw(); startWaitClock();
     try { d.full_spectrum = await BX.getJson(`${BX.API}/api/spectrum?${q}`, 300000); measuring.delete(d); redraw(); }
     catch (e) {
       measuring.delete(d); redraw();
@@ -380,7 +386,7 @@
     };
     async function measure() {
       if (spot.busy) return;
-      spot.busy = true; spot.error = null; draw();
+      spot.busy = true; spot.error = null; draw(); startWaitClock();
       try { spot.sp = await BX.getJson(`${BX.API}/api/spectrum?${new URLSearchParams({ ra: ra.toFixed(5), dec: dec.toFixed(5), snap: 1 })}`, 300000); }
       catch (e) { spot.error = e.message || "no answer"; }
       spot.busy = false; draw();
