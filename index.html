@@ -18,6 +18,7 @@
       <span>Blink<b>X</b></span>
     </a>
     <p class="tagline">Watch the sky change in NASA’s SPHEREx infrared images.</p>
+    <button id="sciBtn" class="btn ghost" type="button" aria-pressed="false" title="Show the raw numbers, FITS details and export tools">Scientist view</button>
     <button id="helpBtn" class="btn ghost" type="button">What am I looking at?</button>
   </header>
 
@@ -83,6 +84,7 @@
         <button role="tab" data-mode="time" aria-selected="false" title="Shortcut: T">Time-lapse</button>
       </div>
       <p id="modeHint" class="mode-hint"></p>
+      <p class="shortcuts muted">Keys: <kbd>B</kbd> blink · <kbd>S</kbd> swipe · <kbd>D</kbd> difference · <kbd>T</kbd> time-lapse · <kbd>←</kbd> <kbd>→</kbd> change the later picture · <kbd>space</kbd> pause</p>
 
       <div id="stage" class="stage" data-mode="blink">
         <figure class="pane" id="pane0">
@@ -133,7 +135,9 @@
           <label class="inline"><input id="showDoodles" type="checkbox" checked> Draw them on the picture</label>
         </div>
         <p id="doodleStatus" class="muted" role="status"></p>
+        <div id="boardFilters" class="filters" hidden></div>
         <div id="doodleList" class="doodle-list"></div>
+        <div id="boardTable" class="sci-only table-scroll"></div>
         <p id="alignNote" class="align-note muted" hidden>
           <span class="an-text"></span>
           <button type="button" class="tip" aria-label="How the pictures are lined up" data-tip="Each exposure comes with its own map of the sky (called a WCS) in the image file. Blink X uses it to redraw every exposure on the same north-up grid. As a second check it compares the star pattern in each exposure with the others; if an exposure turns out to be offset, it is shifted to match the stars and the shift is reported here.">?</button>
@@ -142,6 +146,36 @@
           <summary>How to read a doodle</summary>
           <div id="legendBody" class="legend-body"></div>
         </details>
+      </section>
+
+      <section id="sharePanel" class="card share-panel" aria-label="Share and export">
+        <div class="panel-head">
+          <h2>Sky Code
+            <button type="button" class="tip" aria-label="What is a Sky Code?" data-tip="A Sky Code is this whole view packed into one string: the place in the sky, the field size, the colour band, the two pictures being compared and the doodles found. Paste it into a message. Whoever opens it in Blink X sees exactly what you see, and the page tells them whether the search still finds the same doodles.">?</button>
+          </h2>
+          <span id="skyLen" class="muted"></span>
+        </div>
+        <output id="skyCode" class="sky-code" aria-label="Sky Code for this view"></output>
+        <div class="actions">
+          <button id="copyCode" class="btn primary" type="button">Copy Sky Code</button>
+          <button id="copyCodeUrl" class="btn ghost" type="button">Copy as a link</button>
+          <button id="dlPng" class="btn ghost" type="button">Save doodle map (PNG)</button>
+          <button id="dlSvg" class="btn ghost sci-inline" type="button">Doodle map (SVG)</button>
+          <button id="dlJson" class="btn ghost sci-inline" type="button">Data (JSON)</button>
+          <button id="dlCsv" class="btn ghost sci-inline" type="button">Table (CSV)</button>
+        </div>
+        <p id="codeNote" class="code-note" hidden></p>
+        <form id="openCodeForm" class="row open-code">
+          <input id="openCode" type="search" spellcheck="false" autocomplete="off" aria-label="Paste a Sky Code" placeholder="Got a Sky Code from someone? Paste it here">
+          <button class="btn ghost" type="submit">Open</button>
+        </form>
+      </section>
+
+      <section id="sciPanel" class="card sci-panel sci-only" aria-label="Numbers for scientists">
+        <h2>Every exposure, in numbers</h2>
+        <p id="sciStats" class="muted"></p>
+        <div id="sciFrames" class="table-scroll"></div>
+        <p class="muted">Dates, wavelengths and detector pixels are read from each FITS header (DATE-OBS, MJD-AVG, the WCS and its WAVE-TAB lookup). Sky and noise are the median and scaled MAD of the cut-out. “Repaired” is the share of pixels the SPHEREx pipeline flagged and Blink X filled from neighbours.</p>
       </section>
 
       <div class="strip-head">
@@ -245,5 +279,6 @@
   <script src="config.js"></script>
   <script src="app.js"></script>
   <script src="doodles.js"></script>
+  <script src="tools.js"></script>
 </body>
 </html>
