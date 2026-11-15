@@ -6,6 +6,7 @@
 | Static page on GitHub Pages | Done: <https://khozhijon.github.io/blinkx/> |
 | Backend on Render (free plan) | Done: <https://blinkx-khofra.onrender.com> (service `blinkx-khofra`, blueprint `blinkx`) |
 | Demo video | **Needs you** — `submission/VIDEO_SCRIPT.md` |
+| Demo slides (the allowed alternative to the video) | Done: <https://khozhijon.github.io/blinkx/slides/blinkx-slides.pdf> (7 slides; web version at `/slides/`) |
 | Space Apps submission form | **Needs you** |
 
 ## What to put in the submission form
@@ -15,7 +16,8 @@ Everything is written out field by field in **`submission/PROJECT_PAGE.md`**: op
 - Project Name, High-Level Project Summary, Detailed Project Description, Use of Super Intelligence,
   NASA Data, Space Agency Partner Data and Other References: copy from `PROJECT_PAGE.md`.
 - Link to Final Project: `https://khozhijon.github.io/blinkx/`
-- Link to Project Demo: your video (30 seconds or less), recorded from `submission/VIDEO_SCRIPT.md`.
+- Link to Project Demo: your video (30 seconds or less), recorded from `submission/VIDEO_SCRIPT.md`,
+  or the ready 7-slide deck: `https://khozhijon.github.io/blinkx/slides/blinkx-slides.pdf`.
 - Then tick the two boxes and press **Submit for Judging** before 11:59 PM Eastern on 15 November.
 
 ## Good to know before judging

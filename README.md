@@ -14,6 +14,9 @@ infrared survey, in a browser, on a phone.
 - **Live demo:** <https://khozhijon.github.io/blinkx/> (the saved examples open instantly; live search
   of the whole archive runs on a small free server, <https://blinkx-khofra.onrender.com>, that needs about
   a minute to wake up when nobody has used it for a while)
+- **AI use:** the code, tests and documents in this repository were written with an AI coding
+  assistant (Claude, by Anthropic); commits made that way carry `Co-Authored-By: Claude`. No image,
+  date or measurement is AI-generated. Details: `submission/AI_USE.md`.
 - **Data:** real SPHEREx Level-2 spectral images from NASA/IPAC IRSA. Every date shown is the
   `DATE-OBS` keyword of the FITS file it came from. The one made-up demo field is labelled
   SIMULATED on screen.

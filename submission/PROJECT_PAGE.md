@@ -36,6 +36,13 @@ in seconds, the same way Pluto was found in 1930.
 
 (paste the public link to the 30-second video here)
 
+No time for a video? The rules accept a slide deck of up to 7 slides instead. One is ready, in
+English, with real screenshots: paste this link.
+
+https://khozhijon.github.io/blinkx/slides/blinkx-slides.pdf
+
+(The same seven slides as a web page: https://khozhijon.github.io/blinkx/slides/ )
+
 ## Link to Final Project
 
 https://khozhijon.github.io/blinkx/
@@ -69,7 +76,7 @@ named; everything else is a candidate, with the reasons it might be nothing.
 **Spectra on the fly.** During one visit a spot of sky crosses all six SPHEREx detectors, so one
 visit holds its whole 0.75–5.0 micrometre spectrum. One click ("Spectrum of the centre", any mark
 you place, or the Object Card of a star) reads about a hundred exposures, measures the brightness
-on the spot in each, and draws the spectrum in about half a minute, with a plain-language reading
+on the spot in each, and draws the spectrum while you wait, with a plain-language reading
 and a CSV download. An object that drifts is followed along its drift. A colour band counts as
 the object's only if a source really sits on its spot there; otherwise the dots are drawn hollow
 and the text says whose light they are. A star bright enough to overload the detector gets a
@@ -139,15 +146,19 @@ Code: https://github.com/Khozhijon/blinkx
 
 Yes. We used Claude (Anthropic), through Claude Code, as an AI coding assistant. Working from our
 written requirements, it wrote the Python backend, the HTML/CSS/JavaScript front end, the tests
-and the scripts, ran data experiments against the IRSA archive, and drafted the documentation.
-We chose the challenge, defined what the tool must do and how it should work, reviewed the
-results and are responsible for the submission.
+and the scripts, ran data experiments against the IRSA archive, and drafted the documentation,
+these project-page texts and the slide deck. In the final stage it also proposed additions that
+we accepted (adding exposures together, the Gaia overlay, the record of SPHEREx pointings, the
+spectrum on the fly, the embed mode). We chose the challenge and the idea, set the requirements
+and the rules the tool must keep (real data only, never claim a discovery), reviewed the results
+and are responsible for the submission.
 
 No image, measurement or date shown in Blink X is AI-generated: every pixel comes from NASA
 SPHEREx files. There is no AI model inside the product; change detection and the adding-up of
 exposures are classical image analysis (Astropy, photutils, NumPy). The one made-up field in the tool is a numerical simulation,
 labelled "simulated" on screen. AI-assisted commits are marked "Co-Authored-By: Claude" in the
-git history, and the repository states the AI assistance in README.md and submission/AI_USE.md.
+git history; the page says so in its footer and in a metadata tag, and the repository states it
+in README.md and submission/AI_USE.md.
 
 ## NASA Data
 
@@ -194,7 +205,8 @@ git history, and the repository states the AI assistance in README.md and submis
 1. Both teammates appear on the team's **Members** tab, and both are registered for the same
    local event (**Cambridge, MA**, not waitlisted). Teams that do not meet this are not eligible
    for global judging.
-2. The demo is **30 seconds or less**. A longer video makes the project ineligible.
+2. The demo is a video of **30 seconds or less**, or a deck of **7 slides or fewer** (the ready
+   one has exactly 7). Anything longer makes the project ineligible.
 3. Open the video link and the project link in a private (incognito) window: no login asked.
 4. All text is in English. A video in another language needs English subtitles.
 5. Nobody under 18 appears in the video.

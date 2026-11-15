@@ -1,4 +1,5 @@
 /* Blink X — front end. No build step, no dependencies.
+ * Written with an AI coding assistant (Claude, by Anthropic); see submission/AI_USE.md. Nothing shown is AI-generated data.
  *
  * Pixels arrive as sky-subtracted numbers (not pictures), so brightness, colours, blinking and the
  * difference image are all computed here in the browser and respond instantly.
