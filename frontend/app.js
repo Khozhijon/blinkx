@@ -717,7 +717,8 @@
     const missing = search.stale ? " (NASA's archive search isn't answering right now, so this list of exposures is one saved earlier; the newest pictures may be missing.)" : "";
     if (search.deep) return "This spot is in one of SPHEREx's two deep fields, which it photographs almost every day — tens of thousands of exposures. Showing an even sample over time." + missing;
     const span = v.length ? `${monthYear(v[0].start)} – ${monthYear(v[v.length - 1].end)}` : "";
-    let s = `SPHEREx has photographed this spot ${search.total.toLocaleString()} times in ${v.length} visit${v.length === 1 ? "" : "s"}${span ? ` (${span})` : ""}.`;
+    let s = `SPHEREx has photographed this spot ${search.from_index ? "about " : ""}${search.total.toLocaleString()} times in ${v.length} visit${v.length === 1 ? "" : "s"}${span ? ` (${span})` : ""}.`;
+    if (search.from_index) s += ` (NASA's archive search isn't answering right now, so this list was worked out from Blink X's own record of where SPHEREx pointed${search.index_to ? `, complete to ${fmtDate(search.index_to + "T00:00", false)}` : ""}. Every picture shown is still checked against its own file.)`;
     if (v.length === 1) s += " With one visit so far, slow changes can't show yet — but asteroids still move within days.";
     if (search.saved_on) s += ` (For speed, this list of exposures was saved on ${fmtDate(search.saved_on + "T00:00", false)}; anything SPHEREx released after that is not in it yet.)`;
     return s + missing;

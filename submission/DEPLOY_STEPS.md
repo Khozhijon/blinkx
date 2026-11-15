@@ -10,12 +10,13 @@
 
 ## What to put in the submission form
 
-- Demo URL: `https://khozhijon.github.io/blinkx/`
-- Repository: `https://github.com/Khozhijon/blinkx`
-- Summary: `submission/SUMMARY.md`
-- Data and resources: `submission/RESOURCES.md`
-- AI use: `submission/AI_USE.md`
-- Video: record it from `submission/VIDEO_SCRIPT.md`; slides from `submission/SLIDES.md`
+Everything is written out field by field in **`submission/PROJECT_PAGE.md`**: open it and paste.
+
+- Project Name, High-Level Project Summary, Detailed Project Description, Use of Super Intelligence,
+  NASA Data, Space Agency Partner Data and Other References: copy from `PROJECT_PAGE.md`.
+- Link to Final Project: `https://khozhijon.github.io/blinkx/`
+- Link to Project Demo: your video (30 seconds or less), recorded from `submission/VIDEO_SCRIPT.md`.
+- Then tick the two boxes and press **Submit for Judging** before 11:59 PM Eastern on 15 November.
 
 ## Good to know before judging
 
@@ -24,8 +25,9 @@
   (about a minute), and says so next to the search box.
 - Before recording the video or presenting, open the page a few minutes early and run one search,
   so the server is awake and the search is cached.
-- If NASA's archive search (IRSA) is slow or down, live search says so and falls back to saved
-  results for well-known targets; the examples are not affected.
+- If NASA's archive search (IRSA) is slow or down, live search still works: it uses saved lists for
+  well-known targets and, for anywhere else, its own record of where SPHEREx pointed. The examples
+  are not affected.
 - Render will show "Upgrade" offers in its dashboard. The service is on the Free plan; nothing in
   this project needs a paid plan.
 
