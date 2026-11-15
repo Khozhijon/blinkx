@@ -6,6 +6,7 @@
   <title>Blink X — project slides (Team KhoFra, NASA Space Apps 2026)</title>
   <meta name="description" content="Seven slides about Blink X, a public tool that shows NASA SPHEREx images of any spot in the sky over time. NASA Space Apps Challenge 2026, team KhoFra.">
   <meta name="author" content="Khozhiakbar Khakimov Furkatzhonovich, Francia Constanza Coyotl Cortes (Team KhoFra)">
+  <meta name="ai-assistance" content="These slides and the project's code were written with an AI coding assistant (Claude, by Anthropic). Every picture is a real screenshot of the tool showing NASA data; none is AI-generated.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050506'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23efe9dd' stroke-width='1.5'/%3E%3Cpath d='M16 2v8M16 22v8M2 16h8M22 16h8' stroke='%23efe9dd' stroke-width='1.5'/%3E%3Ccircle cx='20' cy='12' r='3' fill='%23ff5a1f'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,9 +85,9 @@
         <h2>The whole sky, photographed again <em>every six months</em></h2>
         <div class="cols" style="grid-template-columns: 1fr 1.12fr">
           <ul>
-            <li>NASA's <b>SPHEREx</b> telescope photographs the entire sky about every six months, in 102 colours of infrared light.</li>
-            <li>Hidden in the repeat pictures are things that <b>move or change</b>: asteroids, comets, the nearest stars, brown dwarfs, perhaps a planet nobody has seen.</li>
-            <li>But each picture is a 62 MB science file, with its own tilt and its own colour. Only a specialist can open one, let alone compare two.</li>
+            <li>NASA's <b>SPHEREx</b> telescope photographs the entire sky every six months, in 102 infrared colours.</li>
+            <li>Hidden in the repeat pictures: things that <b>move or change</b>. Asteroids, comets, nearby stars, perhaps a planet nobody has seen.</li>
+            <li>But each picture is a 62 MB science file that only a specialist can open, let alone compare.</li>
             <li><b>The challenge:</b> a public tool that shows SPHEREx pictures of any coordinates and makes changes over time easy to see.</li>
           </ul>
           <figure><img src="img/side-barnard.jpg" alt="Two SPHEREx pictures of Barnard's Star, thirteen months apart"><figcaption>Barnard's Star in August 2025 (A) and September 2026 (B). Real SPHEREx pictures, lined up by Blink X: the star has moved 11″ north.</figcaption></figure>
@@ -101,11 +102,11 @@
         <h2>Type a name or coordinates. <em>Blink.</em></h2>
         <div class="cols" style="grid-template-columns: .82fr 1.3fr">
           <ul>
-            <li>Blink X finds <b>every SPHEREx exposure</b> of that spot and lines them up, north at the top. Every date comes from the image file itself.</li>
+            <li>Blink X finds <b>every SPHEREx exposure</b> of that spot and lines them up. Every date comes from the image file itself.</li>
             <li><b>Five ways to compare:</b> blink, swipe, side by side, difference, time-lapse.</li>
-            <li><b>Add exposures together</b> to see things too faint for one exposure.</li>
-            <li>Lay <b>ESA Gaia</b> stars over the picture, each moved to the picture's date.</li>
-            <li>Works on a phone. Every view is a link, and can be <b>embedded</b> in any website.</li>
+            <li><b>Add exposures together</b> to see fainter things.</li>
+            <li>Overlay <b>ESA Gaia</b> stars, moved to the picture's date.</li>
+            <li>Works on a phone. Every view is a link you can share or <b>embed</b>.</li>
           </ul>
           <figure><img src="img/viewer-comet.jpg" alt="The Blink X viewer showing comet 3I/ATLAS"><figcaption>Interstellar comet 3I/ATLAS, 14 December 2025: two exposures three hours apart. The green doodle was drawn by the tool.</figcaption></figure>
         </div>
@@ -119,10 +120,10 @@
         <h2>Sky Doodles: the tool finds <em>what changed</em></h2>
         <div class="cols" style="grid-template-columns: .92fr .6fr .66fr; gap: 2em">
           <ul>
-            <li>It finds the sources in every exposure, checks the alignment on the stars, and links what moved into tracks.</li>
-            <li>Each find is one of <b>five doodles</b>: arrow (a nearby star), spark (an asteroid), comet tail, pulse (a brightness change), zigzag (the wobble a distant planet would show).</li>
-            <li>An <b>Object Card</b> gives the speed with its error, the direction, and a check against JPL Horizons, IMCCE SkyBoT and SIMBAD.</li>
-            <li>Nothing is called a discovery. Unexplained means <b>“candidate”</b>, with the reasons it may be nothing.</li>
+            <li>It finds the sources in every exposure and links what moved into tracks.</li>
+            <li><b>Five doodles:</b> arrow (a nearby star), spark (an asteroid), comet tail, pulse (a brightness change), zigzag (a distant planet's wobble).</li>
+            <li>An <b>Object Card</b> gives speed, direction, and a check against JPL Horizons, IMCCE SkyBoT and SIMBAD.</li>
+            <li>Nothing is called a discovery. Unexplained means <b>“candidate”</b>.</li>
           </ul>
           <figure><img src="img/wise-stage.jpg" alt="WISE 0855 in added-up SPHEREx exposures, with its arrow doodle"><figcaption>WISE 0855, the coldest brown dwarf known. Too faint for one exposure; found by adding each visit's exposures together.</figcaption></figure>
           <figure><img src="img/wise-card.jpg" alt="The Object Card of WISE 0855"><figcaption>Its Object Card: named from SIMBAD, with the measured drift.</figcaption></figure>
@@ -158,9 +159,9 @@
         <h2>One click: the <em>whole spectrum</em> of any spot</h2>
         <div class="cols" style="grid-template-columns: .5fr 1fr; gap: 2.4em">
           <ul>
-            <li>In one visit a spot crosses all six SPHEREx detectors. Blink X reads about <b>100 exposures</b> and measures the spot in each: a 0.75–5 µm spectrum in half a minute.</li>
+            <li>Blink X reads about <b>100 exposures</b> from all six SPHEREx detectors and measures the spot in each: a 0.75–5 µm spectrum, on the fly.</li>
             <li>An object that drifts is <b>followed</b>.</li>
-            <li>Light that is not the object's own is drawn <b>hollow</b>. A star that overloads the detector gets a warning, not a reading.</li>
+            <li>Light that is not the object's own is drawn <b>hollow</b>.</li>
             <li>The numbers download as CSV.</li>
           </ul>
           <div class="spectra">
@@ -178,15 +179,15 @@
         <h2>Built on <em>NASA's open data</em></h2>
         <div class="cols" style="grid-template-columns: 1.25fr 1fr .36fr; gap: 2.2em">
           <ul>
-            <li><b>How:</b> NASA/IPAC's IRSA archive says which SPHEREx Level-2 images cover a position. Blink X then reads only the bytes it needs from NASA's open copy on AWS, never a whole file.</li>
-            <li><b>Still works when the archive's search is down:</b> we recorded where all 101,101 SPHEREx pointings looked. That record finds 99.9% of the exposures the archive lists.</li>
+            <li><b>How:</b> NASA/IPAC's IRSA archive says which SPHEREx images cover a position. Blink X reads only the bytes it needs from NASA's open copy on AWS.</li>
+            <li><b>Works when the archive's search is down:</b> our record of all 101,101 SPHEREx pointings finds 99.9% of the exposures.</li>
             <li><b>Also used:</b> JPL Horizons, NASA WISE, ESA Gaia, CDS SIMBAD and Aladin Lite, IMCCE SkyBoT.</li>
-            <li><b>Open source</b> (MIT), 34 automatic tests. Code written with an AI coding assistant (Claude); no picture, date or measurement is AI-generated.</li>
+            <li><b>Open source</b> (MIT), 34 automatic tests. Code and slides written with an AI coding assistant (Claude); no picture, date or measurement is AI-generated.</li>
           </ul>
           <ul>
-            <li><b>For whom:</b> students and teachers get the method that found Pluto, with this year's NASA data. Researchers get a quick look at any position, with numbers they can export.</li>
-            <li><b>Next:</b> a shared list where volunteers flag candidates for astronomers, calibrated spectra, and a WISE overlay.</li>
-            <li>Each new SPHEREx release adds another date to every spot, with no change to the tool.</li>
+            <li><b>For whom:</b> students get the method that found Pluto, with this year's NASA data. Researchers get a quick look at any position.</li>
+            <li><b>Next:</b> a shared list where volunteers flag candidates for astronomers; calibrated spectra; a WISE overlay.</li>
+            <li>Each new SPHEREx release adds another date to every spot, automatically.</li>
           </ul>
           <figure><img src="img/phone.jpg" alt="Blink X on a phone" style="border-color: var(--rule-2)"><figcaption>On a phone.</figcaption></figure>
         </div>
