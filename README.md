@@ -9,7 +9,8 @@ from the other, or play them as a **time-lapse**. Things that moved — asteroid
 stars — pop out. It is the 1930 blink comparator that found Pluto, pointed at a 2025–26 all-sky
 infrared survey, in a browser, on a phone.
 
-- **Live demo:** _add the public URL here after deploying_
+- **Live demo:** <https://khozhijon.github.io/blinkx/> (the saved examples open instantly; live search
+  of the whole archive runs on a small free server that needs about a minute to wake up)
 - **Data:** real SPHEREx Level-2 spectral images from NASA/IPAC IRSA. Every date shown is the
   `DATE-OBS` keyword of the FITS file it came from. Nothing is simulated.
 
