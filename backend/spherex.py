@@ -29,7 +29,6 @@ import numpy as np
 from astropy.io import fits
 from astropy.io.votable import parse_single_table
 from astropy.wcs import WCS, FITSFixedWarning
-from scipy.ndimage import map_coordinates
 
 from . import cache
 
@@ -452,6 +451,20 @@ def _read_flag_rows(eh: ExposureHeader, y0: int, y1: int) -> np.ndarray:
     return out
 
 
+def _bilinear(src: np.ndarray, yy: np.ndarray, xx: np.ndarray) -> np.ndarray:
+    """Sample ``src`` at fractional pixel positions (edges are clamped; callers mask the outside)."""
+    h, w = src.shape
+    x0 = np.floor(xx).astype(int)
+    y0 = np.floor(yy).astype(int)
+    fx = (xx - x0).astype(np.float32)
+    fy = (yy - y0).astype(np.float32)
+    xa, xb = np.clip(x0, 0, w - 1), np.clip(x0 + 1, 0, w - 1)
+    ya, yb = np.clip(y0, 0, h - 1), np.clip(y0 + 1, 0, h - 1)
+    top = src[ya, xa] * (1 - fx) + src[ya, xb] * fx
+    bottom = src[yb, xa] * (1 - fx) + src[yb, xb] * fx
+    return top * (1 - fy) + bottom * fy
+
+
 def _inpaint(img: np.ndarray, bad: np.ndarray, bloom: np.ndarray) -> np.ndarray:
     """Replace pipeline-flagged pixels with their good neighbours (never with invented structure).
 
@@ -520,11 +533,11 @@ def make_frame(exp: dict, ra: float, dec: float, size_deg: float, n: int | None 
     meta["masked_fraction"] = round(float(bad.mean()), 4)
 
     src = _inpaint(img, bad, bloom)
-    coords = np.array([py - y0, px - x0])
-    out = map_coordinates(src, coords, order=1, mode="constant", cval=np.nan)
-    filled = map_coordinates(bad.astype(np.float32), coords, order=0, mode="constant", cval=0.0) > 0.5
+    out = _bilinear(src, py - y0, px - x0)
+    bh, bw = bad.shape
+    filled = bad[np.clip(np.rint(py - y0).astype(int), 0, bh - 1), np.clip(np.rint(px - x0).astype(int), 0, bw - 1)]
     out[~inside] = np.nan
-    filled &= inside
+    filled = filled & inside
 
     meta["coverage"] = round(float(np.isfinite(out).mean()), 4)
     meta["unit"] = str(h.get("BUNIT", "MJy / sr"))

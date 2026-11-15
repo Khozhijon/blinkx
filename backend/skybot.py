@@ -45,7 +45,8 @@ def cone(ra: float, dec: float, size_deg: float, mjd: float) -> list[dict]:
     try:
         r = httpx.get(URL, params=params, timeout=40, follow_redirects=True)
         r.raise_for_status()
-        rows = r.json()
+        # SkyBoT answers "204 No Content" when no known object is in the field.
+        rows = [] if r.status_code == 204 or not r.content.strip() else r.json()
     except Exception as exc:  # noqa: BLE001
         raise SkybotError(f"SkyBoT (IMCCE) did not answer: {type(exc).__name__}") from exc
     out = []

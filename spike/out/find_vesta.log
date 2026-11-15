@@ -1,1 +1,20 @@
 # 4 Vesta (A807 FA): 244 of 2073 6-h steps have elongation (80.0, 100.0)
+#   50/244 SIA windows, 2 exposures so far
+#   100/244 SIA windows, 8 exposures so far
+#   150/244 SIA windows, 8 exposures so far
+#   200/244 SIA windows, 112 exposures so far
+# 4 Vesta (A807 FA): 160 exposures near the track, checking WCS...
+== 4 Vesta (A807 FA): 151 exposures contain it; per band {'D1': 17, 'D2': 37, 'D3': 21, 'D4': 17, 'D5': 37, 'D6': 22}
+   D1: 8 exposures 2026-07-05T00:56 -> 2026-07-05T07:34 (6.6 h), moves 293"  V~7.831
+   D1: 9 exposures 2026-07-10T03:11 -> 2026-07-12T00:48 (45.6 h), moves 1861"  V~7.782
+   D2: 4 exposures 2026-07-11T18:14 -> 2026-07-11T18:20 (0.1 h), moves 4"  V~7.766
+   D2: 32 exposures 2026-07-13T06:04 -> 2026-07-17T17:35 (107.5 h), moves 4089"  V~7.75
+   D3: 3 exposures 2025-08-04T11:04 -> 2025-08-05T13:07 (26.1 h), moves 1275"  V~7.265
+   D3: 18 exposures 2026-07-18T13:08 -> 2026-07-20T07:29 (42.3 h), moves 1500"  V~7.692
+   D4: 8 exposures 2026-07-05T00:56 -> 2026-07-05T07:34 (6.6 h), moves 293"  V~7.831
+   D4: 9 exposures 2026-07-10T03:11 -> 2026-07-12T00:48 (45.6 h), moves 1861"  V~7.782
+   D5: 4 exposures 2026-07-11T18:14 -> 2026-07-11T18:20 (0.1 h), moves 4"  V~7.766
+   D5: 32 exposures 2026-07-13T06:04 -> 2026-07-17T17:35 (107.5 h), moves 4089"  V~7.75
+   D6: 3 exposures 2025-08-04T11:04 -> 2025-08-05T13:07 (26.1 h), moves 1275"  V~7.265
+   D6: 19 exposures 2026-07-18T13:08 -> 2026-07-20T07:29 (42.3 h), moves 1500"  V~7.692
+done

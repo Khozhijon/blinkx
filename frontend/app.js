@@ -207,7 +207,12 @@
 
   /* ------------------------------------------------------------------ drawing */
   let scheduled = false;
-  function schedule() { if (!scheduled) { scheduled = true; requestAnimationFrame(() => { scheduled = false; draw(); paintThumbs(); }); } }
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    const run = () => { if (!scheduled) return; scheduled = false; draw(); paintThumbs(); };
+    requestAnimationFrame(run); setTimeout(run, 120);            // the timeout covers background tabs
+  }
 
   function paint(pane, cv) {
     const el = $("cv" + pane);
@@ -464,14 +469,22 @@
   }
 
   /* ------------------------------------------------------------------ loading */
+  /** 1 if the field would run off the 2040-pixel detector in this exposure, else 0. */
+  function nearEdge(f) {
+    if (!f.pixel) return 0;
+    const m = st.size * 3600 / 6.15 * 0.72, [x, y] = f.pixel;
+    return x < m || y < m || x > 2039 - m || y > 2039 - m ? 1 : 0;
+  }
+
   function choosePair(frames) {
     if (!frames.length) return [null, null];
     if (frames.length === 1) return [frames[0].id, frames[0].id];
     let best = null;
     for (let i = 0; i < frames.length; i++) for (let j = i + 1; j < frames.length; j++) {
       const dt = frames[j].mjd - frames[i].mjd; if (dt < VISIT_GAP_DAYS) continue;
-      // closest infrared colour first; a longer wait between the two breaks ties
-      const score = Math.abs((frames[i].wavelength_um || 0) - (frames[j].wavelength_um || 0)) - 2e-5 * dt;
+      // closest infrared colour first; a longer wait between the two breaks ties;
+      // avoid pictures where the spot sits at the very edge of the detector (part of the field is missing)
+      const score = Math.abs((frames[i].wavelength_um || 0) - (frames[j].wavelength_um || 0)) - 2e-5 * dt + nearEdge(frames[i]) + nearEdge(frames[j]);
       if (!best || score < best[0]) best = [score, frames[i].id, frames[j].id];
     }
     return best ? [best[1], best[2]] : [frames[0].id, frames[frames.length - 1].id];

@@ -1,0 +1,138 @@
+"""Offline unit tests (no network): python -m pytest -q"""
+import math
+
+import numpy as np
+import pytest
+from astropy.io import fits
+
+from backend import resolver, spherex as sx
+from backend.main import _visits
+
+
+def test_parse_position_decimal_and_sexagesimal():
+    assert resolver.parse_position("269.4486 +4.7680") == (269.4486, 4.768)
+    assert resolver.parse_position("269.4486, -4.7680") == (269.4486, -4.768)
+    ra, dec = resolver.parse_position("17h57m48.5s +04d41m36s")
+    assert ra == pytest.approx(269.45208, abs=1e-4) and dec == pytest.approx(4.69333, abs=1e-4)
+    ra, dec = resolver.parse_position("17:57:48.5 +04:41:36")
+    assert ra == pytest.approx(269.45208, abs=1e-4)
+    assert resolver.parse_position("Barnard's star") is None
+    assert resolver.parse_position("M 31") is None
+    with pytest.raises(resolver.ResolveError):
+        resolver.parse_position("400 10")
+
+
+def test_wave_tab_lookup_is_bilinear():
+    # 3 x 2 control grid over a 100 x 50 pixel detector: wavelength = 1 + x/100, bandwidth = 0.01 + y/1000
+    xv, yv = np.array([1.0, 51.0, 101.0]), np.array([1.0, 51.0])
+    values = np.zeros((2, 3, 2))
+    for j, y in enumerate(yv):
+        for i, x in enumerate(xv):
+            values[j, i] = (1 + (x - 1) / 100, 0.01 + (y - 1) / 1000)
+    hdr = fits.Header()
+    wl, bw = sx.wavelength_at(hdr, (xv, yv, values), 25.0, 10.0)  # 0-based pixel
+    assert wl == pytest.approx(1.25) and bw == pytest.approx(0.02)
+    # outside the table: clamps to the edge instead of extrapolating
+    wl, _ = sx.wavelength_at(hdr, (xv, yv, values), 500.0, 10.0)
+    assert wl == pytest.approx(2.0)
+    # a cutout shifts CRPIXnW; the lookup must follow it
+    hdr["CRPIX1W"] = -9.0  # cutout starts 10 pixels into the full frame
+    wl, _ = sx.wavelength_at(hdr, (xv, yv, values), 15.0, 10.0)
+    assert wl == pytest.approx(1.25)
+
+
+def test_parse_wave_table_from_file_tail():
+    cols = [
+        fits.Column(name="X", format="3J", array=np.array([[1, 51, 101]])),
+        fits.Column(name="Y", format="2J", array=np.array([[1, 51]])),
+        fits.Column(name="VALUES", format="12E", dim="(2,3,2)", array=np.arange(12, dtype="f4").reshape(1, 2, 3, 2)),
+    ]
+    hdu = fits.BinTableHDU.from_columns(cols, name="WCS-WAVE")
+    import io
+
+    buf = io.BytesIO()
+    fits.HDUList([fits.PrimaryHDU(), fits.ImageHDU(np.zeros((4, 4), "f4")), hdu]).writeto(buf)
+    raw = buf.getvalue()[-4 * sx.BLOCK :]
+    x, y, values = sx._parse_wave_table(raw)
+    assert x.tolist() == [1, 51, 101] and y.tolist() == [1, 51]
+    assert values.shape == (2, 3, 2) and values[1, 2].tolist() == [10.0, 11.0]
+
+
+def test_tangent_grid_is_north_up_east_left():
+    ra0, dec0, size, n = 120.0, 35.0, 0.1, 128
+    ra, dec = sx._tangent_grid(ra0, dec0, size, n)
+    c = n // 2
+    assert dec[0, c] > dec[-1, c]  # top row is north
+    assert ra[c, 0] > ra[c, -1]  # left column is east (larger RA)
+    assert abs(dec[0, c] - dec[-1, c] - size * (n - 1) / n) < 1e-6
+    # the four central pixels straddle the target
+    assert np.mean(ra[c - 1 : c + 1, c - 1 : c + 1]) == pytest.approx(ra0, abs=1e-7)
+    assert np.mean(dec[c - 1 : c + 1, c - 1 : c + 1]) == pytest.approx(dec0, abs=1e-7)
+
+
+def test_encode_decode_roundtrip_and_mask():
+    rng = np.random.default_rng(1)
+    img = rng.normal(0.3, 0.02, (128, 128)).astype(np.float32)
+    img[60:63, 60:63] += 500.0  # a bright star
+    img[:5, :5] = np.nan  # off the detector
+    filled = np.zeros((128, 128), bool)
+    filled[10, 20] = True
+    meta = sx.encode_frame({"image": img, "filled": filled, "meta": {"n": 128}})
+    back = sx.decode_frame(meta)
+    assert np.isnan(back[:5, :5]).all() and np.isfinite(back[5:, 5:]).all()
+    sky = img - meta["sky"]
+    faint = np.abs(sky) < 5 * meta["sigma"]
+    assert np.nanmax(np.abs(back - sky)[faint & np.isfinite(sky)]) < 0.02 * meta["sigma"]  # noise is kept exactly
+    assert back[61, 61] == pytest.approx(sky[61, 61], rel=2e-3)  # bright pixels to 0.2 %
+    assert meta["sigma"] == pytest.approx(0.02, rel=0.15)
+    import base64
+
+    bits = np.unpackbits(np.frombuffer(base64.b64decode(meta["filled"]), np.uint8))[: 128 * 128].reshape(128, 128)
+    assert bits[10, 20] == 1 and bits.sum() == 1
+
+
+def test_inpaint_fills_holes_from_neighbours():
+    img = np.full((7, 7), 2.0, np.float32)
+    img[3, 3] = 9999.0  # cosmic ray
+    bad = np.zeros((7, 7), bool)
+    bad[3, 3] = True
+    out = sx._inpaint(img, bad, np.zeros((7, 7), bool))
+    assert out[3, 3] == pytest.approx(2.0)
+    # inside a saturated star the hole takes the brightest neighbour
+    img2 = np.full((7, 7), 2.0, np.float32)
+    img2[2, 3] = 800.0
+    img2[3, 3] = np.nan
+    bloom = np.zeros((7, 7), bool)
+    bloom[3, 3] = True
+    out2 = sx._inpaint(img2, np.isnan(img2), bloom)
+    assert out2[3, 3] == pytest.approx(800.0)
+
+
+def test_bilinear_matches_hand_value():
+    src = np.array([[0.0, 10.0], [20.0, 30.0]], np.float32)
+    out = sx._bilinear(src, np.array([[0.5]]), np.array([[0.5]]))
+    assert out[0, 0] == pytest.approx(15.0)
+
+
+def test_split_header_finds_data_offset():
+    hdr = fits.Header()
+    hdr["SIMPLE"] = True
+    hdr["BITPIX"] = 8
+    hdr["NAXIS"] = 0
+    raw = hdr.tostring(endcard=True, padding=True).encode()
+    parsed, end = sx._split_header(raw + b"\0" * 100, 0)
+    assert end == sx.BLOCK and parsed["BITPIX"] == 8
+
+
+def test_visits_group_by_gaps():
+    exps = [{"mjd": 60900.0 + d, "detector": 2} for d in (0, 1, 2)] + [{"mjd": 61100.0, "detector": 3}]
+    v = _visits(exps)
+    assert [x["count"] for x in v] == [3, 1]
+    assert v[0]["bands"] == [2] and v[1]["bands"] == [3]
+    assert v[0]["start"].startswith("2025-08-13")
+
+
+def test_grid_size_keeps_native_sampling():
+    for size in (0.05, 0.1, 0.2, 0.4):
+        assert size * 3600 / sx.grid_size(size) <= 6.15  # never coarser than a SPHEREx pixel
+    assert math.isclose(sx.grid_size(0.1), 128)
