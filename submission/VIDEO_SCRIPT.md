@@ -31,6 +31,9 @@ About 77 spoken words: read it briskly. Record the screen at 1080p with your own
   comet from another star is sixty-five times brighter exactly where carbon dioxide glows.”
 - **A changing star** for the last shot: target **RW Aurigae**, click the doodle, scroll to
   **Brightness at each visit**.
+- **A brown dwarf's fingerprint** (three seconds, in place of the Barnard's Star shot): target
+  **Epsilon Indi B**, click the doodle, scroll to **Full spectrum**. “One click measures its whole
+  spectrum: water and methane, the fingerprint of a brown dwarf.”
 
 ## Recording tips
 

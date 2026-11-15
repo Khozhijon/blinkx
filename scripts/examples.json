@@ -151,7 +151,8 @@
       "near_um": 1.27,
       "tol": 0.1,
       "max": 16
-    }
+    },
+    "spectrum": true
   },
   {
     "slug": "simulated-planet-x",

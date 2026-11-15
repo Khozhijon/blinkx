@@ -250,13 +250,147 @@
     g += `<line class="loc" x1="${L}" x2="${W - R}" y1="${ly}" y2="${ly}"/><line class="loc-on" x1="${f1(LX(Math.max(0.75, pts[0].wl)))}" x2="${f1(Math.max(LX(Math.min(5, pts[pts.length - 1].wl)), LX(Math.max(0.75, pts[0].wl)) + 3))}" y1="${ly}" y2="${ly}"/>` +
       `<text x="${L - 6}" y="${ly + 3.5}" text-anchor="end">0.75</text><text x="${L}" y="${ly - 7}">${narrow ? "this slice of SPHEREx's 0.75 – 5.0 µm" : "this slice, out of all 102 SPHEREx colours (0.75 – 5.0 µm)"}</text>`;
     const rows = pts.map((q) => `<tr><td>${q.wl.toFixed(3)}</td><td>${q.mjy}</td><td>${esc(q.frame)}</td></tr>`).join("");
-    return { html: `<section class="spectrum" style="--c:${color}"><h3>Spectrum · brightness at each wavelength</h3>` +
+    return { html: `<section class="spectrum" style="--c:${color}"><h3>This colour band · every exposure</h3>` +
       `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Brightness of this object at ${pts.length} wavelengths between ${pts[0].wl.toFixed(2)} and ${pts[pts.length - 1].wl.toFixed(2)} micrometres">${g}</svg>` +
       `<p class="spec-hint">${esc(sp.hint || "")}</p>` +
       `<p class="muted">${d.simulated ? "Simulated object: these brightness values are made up. " : ""}Every SPHEREx exposure sees a spot of sky in one infrared colour, so each dot is one exposure. ` +
       `Brightness is in ${inJy ? "janskys" : "millijanskys"}, the unit astronomers use, measured in a small circle (${sp.aperture_arcsec}″ radius) and approximate: very bright objects overload the detector and read too low.</p></section>`,
       table: `<div class="scroll"><table><thead><tr><th>λ µm</th><th>flux mJy (approx.)</th><th>exposure</th></tr></thead><tbody>${rows}</tbody></table></div>` };
   }
+
+  /* ------------------------------------------------------------------ full spectrum: all six colour bands of one visit */
+  const FULL_MARKS = [[1.4, "H₂O"], [1.9, "H₂O"], [3.3, "CH₄"], [4.26, "CO₂"]];
+  function fullSpectrumSvg(sp, color) {
+    const pts = sp.points || [], narrow = window.innerWidth < 720, W = narrow ? 340 : 560, H = narrow ? 214 : 232, L = 46, R = 12, T0 = 30, B = 30;
+    const w0 = 0.7, w1 = 5.05, line = sp.line || [];
+    const ref = line.length ? line.map((p) => p[1]) : pts.map((p) => p.mjy), sorted = ref.slice().sort((a, b) => a - b);
+    const big = Math.max(sorted[Math.max(0, Math.floor(sorted.length * 0.98) - 1)] || 1, ...pts.filter((p) => !p.ours).map((p) => p.mjy * 0.9), 1e-6);
+    const inJy = big >= 1000, k = inJy ? 0.001 : 1, top = niceCeil(big * k * 1.1), unit = inJy ? "Jy" : "mJy";
+    const X = (w) => L + (w - w0) / (w1 - w0) * (W - L - R), Y = (v) => T0 + (1 - Math.max(0, Math.min(top, v)) / top) * (H - T0 - B), f1 = (v) => v.toFixed(1);
+    const yv = (v) => (v >= 100 ? v.toFixed(0) : v >= 10 ? String(+v.toFixed(1)) : String(+v.toPrecision(2)));
+    let g = "";
+    for (const v of [0, top / 2, top]) g += `<line class="${v ? "grid" : "ax"}" x1="${L}" x2="${W - R}" y1="${f1(Y(v))}" y2="${f1(Y(v))}"/><text x="${L - 6}" y="${f1(Y(v) + 3.5)}" text-anchor="end">${yv(v)}</text>`;
+    g += `<line class="ax" x1="${L}" x2="${L}" y1="${T0}" y2="${H - B}"/><text x="${L - 6}" y="${T0 - 17}" text-anchor="end">${unit}</text><text x="${L - 6}" y="${H - B + 16}" text-anchor="end">µm</text>`;
+    for (let w = 1; w <= 5; w += narrow ? 1 : 0.5) g += `<line class="ax" x1="${f1(X(w))}" x2="${f1(X(w))}" y1="${H - B}" y2="${H - B + 4}"/><text x="${f1(X(w))}" y="${H - B + 16}" text-anchor="middle">${w.toFixed(1)}</text>`;
+    // the six colour bands: a bracket over each, filled where the object itself is seen
+    for (const b of sp.bands || []) {
+      const a = X(b.range_um[0]), z = X(b.range_um[1]);
+      g += `<line class="${b.on_spot ? "loc-on" : "loc"}" x1="${f1(a)}" x2="${f1(z)}" y1="${T0 - 6}" y2="${T0 - 6}"/><text class="${b.on_spot ? "band-on" : ""}" x="${f1((a + z) / 2)}" y="${T0 - 11}" text-anchor="middle">${b.band}</text>`;
+    }
+    for (const [w, name] of FULL_MARKS) g += `<line class="mark" x1="${f1(X(w))}" x2="${f1(X(w))}" y1="${T0}" y2="${H - B}"/><text class="mark-t" x="${f1(X(w) + 3)}" y="${T0 + 9}">${name}</text>`;
+    for (const p of pts) if (!p.ours) g += `<circle class="pt other" cx="${f1(X(p.wl))}" cy="${f1(Y(p.mjy * k))}" r="2"><title>${p.wl.toFixed(2)} µm · ${yv(Math.max(0, p.mjy) * k)} ${unit} · not the object itself</title></circle>`;
+    let seg = [];                                  // the line stops wherever the object is not seen
+    const flush = () => { if (seg.length > 1) g += `<polyline class="line strong" points="${seg.join(" ")}"/>`; seg = []; };
+    line.forEach((p, i) => { if (i && p[0] - line[i - 1][0] > 0.45) flush(); seg.push(`${f1(X(p[0]))},${f1(Y(p[1] * k))}`); });
+    flush();
+    const dim = line.length && line.length < pts.filter((p) => p.ours).length;
+    for (const p of pts) if (p.ours && p.mjy * k <= top * 1.02) g += `<circle class="pt${dim ? " dim" : ""}" cx="${f1(X(p.wl))}" cy="${f1(Y(p.mjy * k))}" r="${dim ? 2 : 2.2}"><title>${p.wl.toFixed(2)} µm · ${yv(Math.max(0, p.mjy) * k)} ${unit}</title></circle>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Brightness of this object from 0.75 to 5 micrometres, ${pts.length} measurements">${g}</svg>`;
+  }
+  const FULL_HEAD = `Full spectrum · 0.75 to 5 <span class="asis">µm</span>, all six colour bands`;
+  const WAITING = `<p class="spec-hint" id="fullSpecWait"><span class="spinner small"></span>Measuring… Blink X is reading about a hundred exposures from NASA's archive. Allow up to a minute.</p>`;
+  /** A measured spectrum: the chart, a plain reading of it, how it was made, and the numbers to take away. */
+  function fullSpecBody(sp, color, changes) {
+    if (!sp.points || !sp.points.length) return `<p class="spec-hint">${esc(sp.hint || "No spectrum could be measured here.")}</p>`;
+    const anyOther = sp.points.some((p) => !p.ours);
+    const steps = changes ? " This star changes brightness, and the colour bands were photographed on different days of the visit: a step from one band to the next can be a change in time, not in colour." : "";
+    return fullSpectrumSvg(sp, color) + `<p class="spec-hint">${esc((sp.hint || "") + steps)}</p>` +
+      `<p class="muted">Each dot is one exposure. The numbered bars on top are SPHEREx's six colour bands${anyOther ? ": bright where the object itself is seen. Hollow dots are light that is not its own" : ""}. ` +
+      `${sp.visit ? `${sp.visit.exposures} exposures, ${esc(sp.visit.first)} to ${esc(sp.visit.last)}. ` : ""}Brightness in a small circle (${sp.aperture_arcsec || 9.2}″ radius), approximate. ` +
+      `${changes ? "" : "The bands are photographed on different days of the visit, so a small step between two of them can be a change in time. "}The dashed marks show where water, methane and carbon dioxide act.</p>` +
+      `<div class="actions"><button class="btn ghost" type="button" id="fullSpecCsv">Save these numbers (CSV)</button></div>`;
+  }
+  function spectrumCsv(sp, what) {
+    const pos = sp.position || {};
+    return [`# Blink X: SPHEREx spectrum of ${what}`,
+      `# position RA ${pos.ra != null ? pos.ra : ""} Dec ${pos.dec != null ? pos.dec : ""} (degrees, ICRS)`,
+      `# one visit: ${sp.visit ? sp.visit.first + " to " + sp.visit.last : ""}; brightness summed in a circle of ${sp.aperture_arcsec || 9.2} arcsec radius, no aperture correction`,
+      `# on_object = 0: nothing sits on the spot in that colour band, so the value is sky or a neighbour's light`,
+      "wavelength_um,brightness_mJy,noise_mJy,band,exposure,on_object",
+      ...sp.points.map((p) => [p.wl, p.mjy, p.err, p.band, p.frame, p.ours ? 1 : 0].join(","))].join("\n");
+  }
+  function wireFullSpec(sp, what) {
+    const btn = $("fullSpecCsv"); if (!btn || !sp) return;
+    btn.addEventListener("click", () => {
+      const a = document.createElement("a"), name = String(what).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "spot";
+      a.href = URL.createObjectURL(new Blob([spectrumCsv(sp, what)], { type: "text/csv" })); a.download = `blinkx-spectrum-${name}.csv`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    });
+  }
+  const nameOf = (d) => (d.known && d.known.name) || d.id;
+  const measuring = new WeakSet();                 // doodles whose full spectrum is on its way (kept off the doodle itself: doodles are exported as they are)
+  function fullSpectrumBlock(d, color) {
+    const sp = d.full_spectrum, can = (d.type === "arrow" || d.type === "pulse") && !d.simulated && !(st.example && st.example.simulated);
+    if (!sp && !can) return "";
+    const head = `<section class="spectrum fullspec" id="fullSpec" style="--c:${color}"><h3>${FULL_HEAD}</h3>`;
+    if (measuring.has(d)) return head + WAITING + `</section>`;
+    if (!sp) return head + `<p class="spec-hint">The chart further down shows one colour band. SPHEREx photographs the same spot in five more.</p>` +
+      `<div class="actions"><button class="btn" type="button" id="fullSpecBtn">Measure the full spectrum</button></div><p class="muted" id="fullSpecNote">Reads about a hundred exposures from NASA's archive: allow up to a minute.</p></section>`;
+    return head + fullSpecBody(sp, color, d.type === "pulse") + `</section>`;
+  }
+  async function measureFullSpectrum(d, color) {
+    if (measuring.has(d) || d.full_spectrum) return;
+    const last = d.points[d.points.length - 1], first = d.points[0], m = d.motion || {}, q = new URLSearchParams();
+    if (d.type === "arrow" && m.rate_arcsec_per_year && m.pa_deg != null) {       // follow the drift: position at the last sighting, speed east and north
+      const pa = m.pa_deg * Math.PI / 180;
+      q.set("ra", last.ra.toFixed(5)); q.set("dec", last.dec.toFixed(5)); q.set("t0", last.t.toFixed(2));
+      q.set("pm_e", (m.rate_arcsec_per_year * Math.sin(pa)).toFixed(2)); q.set("pm_n", (m.rate_arcsec_per_year * Math.cos(pa)).toFixed(2));
+    } else { q.set("ra", first.ra.toFixed(5)); q.set("dec", first.dec.toFixed(5)); }
+    const redraw = () => { const el = $("fullSpec"); if (el && st.pickedDoodle === d.id) { el.outerHTML = fullSpectrumBlock(d, color); wireFullSpec(d.full_spectrum, nameOf(d)); if ($("fullSpecBtn")) $("fullSpecBtn").addEventListener("click", () => measureFullSpectrum(d, color)); } };
+    measuring.add(d); redraw();
+    try { d.full_spectrum = await BX.getJson(`${BX.API}/api/spectrum?${q}`, 300000); measuring.delete(d); redraw(); }
+    catch (e) {
+      measuring.delete(d); redraw();
+      const note = $("fullSpecNote"), btn = $("fullSpecBtn");
+      if (btn && st.pickedDoodle === d.id) btn.textContent = "Try again";
+      if (note && st.pickedDoodle === d.id) note.textContent = `That did not work just now (${e.message || "no answer"}). NASA's archive may be slow: try once more.`;
+    }
+  }
+
+  /* ------------------------------------------------------------------ the spectrum of any spot (the centre, or a mark) */
+  const spotSpectra = new Map();
+  const sepArcsec = (ra1, dec1, ra2, dec2) => Math.hypot((ra1 - ra2) * Math.cos(rad(dec1)), dec1 - dec2) * 3600;
+  function openSpectrum(ra, dec, label) {
+    if (st.example && st.example.simulated) { BX.toast("This example is made up, so there is no real sky to measure here."); return; }
+    const own = (st.doodles || []).find((d) => (d.type === "arrow" || d.type === "pulse") && !d.simulated && d.points.some((p) => sepArcsec(p.ra, p.dec, ra, dec) < 6));
+    if (own) {                                                 // a doodle sits here: its card has the spectrum, and follows the object if it drifts
+      openCard(own.id);
+      if (!own.full_spectrum) measureFullSpectrum(own, (TYPES[own.type] || TYPES.spark).color);
+      setTimeout(() => { const el = $("fullSpec"); if (el) el.scrollIntoView({ block: "start" }); }, 80);
+      return;
+    }
+    const key = `${ra.toFixed(4)}_${dec.toFixed(4)}`, ex = st.example;
+    if (!spotSpectra.has(key) && ex && ex.spectrum && sepArcsec(ex.target.ra, ex.target.dec, ra, dec) < 3) spotSpectra.set(key, { sp: ex.spectrum });
+    if (!spotSpectra.has(key)) spotSpectra.set(key, {});
+    const spot = spotSpectra.get(key);
+    st.pickedDoodle = null; st.pickedSpot = key;
+    const draw = () => {
+      if (st.pickedSpot !== key) return;
+      const state = spot.sp ? fullSpecBody(spot.sp) : spot.error
+        ? `<p class="spec-hint">That did not work just now (${esc(spot.error)}). NASA's archive may be slow.</p><div class="actions"><button class="btn" type="button" id="fullSpecBtn">Try again</button></div>` : WAITING;
+      $("cardBody").classList.add("spot");
+      $("cardBody").innerHTML =
+        `<header class="card-head spot-head"><div><p class="kind">Spectrum · the light of one spot, spread out by colour</p>` +
+        `<h2>${esc(BX.fmtSexa(ra, dec))} <span>${esc(label)}</span></h2></div></header>` +
+        `<p class="explain-text">Every SPHEREx exposure sees this spot in one infrared colour. Blink X takes the exposures of one visit from all six detectors and measures the brightness on the spot in each of them.</p>` +
+        `<section class="spectrum fullspec" id="fullSpec"><h3>${FULL_HEAD}</h3>${state}</section>` +
+        `<p class="disclaimer">A quick look, not a calibrated measurement: no correction for the light that falls outside the small circle, and close neighbours add theirs.</p>`;
+      wireFullSpec(spot.sp, label);
+      if ($("fullSpecBtn")) $("fullSpecBtn").addEventListener("click", measure);
+    };
+    async function measure() {
+      if (spot.busy) return;
+      spot.busy = true; spot.error = null; draw();
+      try { spot.sp = await BX.getJson(`${BX.API}/api/spectrum?${new URLSearchParams({ ra: ra.toFixed(5), dec: dec.toFixed(5), snap: 1 })}`, 300000); }
+      catch (e) { spot.error = e.message || "no answer"; }
+      spot.busy = false; draw();
+    }
+    draw();
+    const dlg = $("card"); if (dlg.showModal && !dlg.open) dlg.showModal(); else dlg.setAttribute("open", "");
+    renderBoard();
+    if (!spot.sp && !spot.busy) measure();
+  }
+  BX.openSpectrum = openSpectrum;
 
   /* ------------------------------------------------------------------ light curve: brightness at each visit */
   function lightCurveBlock(d, color) {
@@ -285,7 +419,7 @@
 
   function openCard(id) {
     const d = st.doodles.find((x) => x.id === id); if (!d) return;
-    st.pickedDoodle = id;
+    st.pickedDoodle = id; st.pickedSpot = null;
     const T = TYPES[d.type] || TYPES.spark, m = d.motion || {}, b = d.brightness || {}, first = d.points[0], last = d.points[d.points.length - 1];
     const rows = [];
     if (m.dist_arcsec != null) rows.push(["Moved", `${fmtNum(m.dist_arcsec)}″ = ${fmtNum(m.dist_spherex_px)} SPHEREx pixels, toward the ${m.direction}`]);
@@ -301,17 +435,20 @@
     rows.push(["Checked in", esc((d.checked || []).join(", ") || "no catalogue could be reached")]);
     const sci = d.points.map((p) => `<tr><td>${esc((p.date || "").replace("T", " "))}</td><td>${p.ra.toFixed(5)}</td><td>${p.dec >= 0 ? "+" : ""}${p.dec.toFixed(5)}</td><td>${p.x.toFixed(1)}, ${p.y.toFixed(1)}</td><td>${p.wavelength_um ? p.wavelength_um.toFixed(3) : ""}</td><td>${p.peak_sigma}</td><td>${p.n}</td></tr>`).join("");
     const spec = spectrumBlock(d, T.color) || { html: "", table: "" };
+    $("cardBody").classList.remove("spot");
     $("cardBody").innerHTML =
       `<header class="card-head" style="--c:${T.color}"><div class="big">${glyph(d, 96)}</div><div><p class="kind">${esc(T.label)} · ${esc(T.what)}</p>` +
       `<h2>${esc(d.id)} <span>“${esc(d.nickname)}”</span></h2>${statusChip(d)}</div></header>` +
       `<p class="explain-text">${esc(d.explain || "")}</p>` +
-      `<dl class="card-facts">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` + lightCurveBlock(d, T.color) + spec.html +
+      `<dl class="card-facts">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` + lightCurveBlock(d, T.color) + fullSpectrumBlock(d, T.color) + spec.html +
       (d.status !== "known" ? `<p class="disclaimer">This is a candidate, not a discovery. Image flaws, reflections of bright stars and objects that shine in only one infrared colour can all look like this.</p>` : "") +
       `<details class="sci-table"><summary>Numbers for scientists</summary><div class="scroll"><table><thead><tr><th>UTC (mid-group)</th><th>RA °</th><th>Dec °</th><th>x, y (grid px)</th><th>λ µm</th><th>peak / noise</th><th>exposures</th></tr></thead><tbody>${sci}</tbody></table></div>${spec.table}` +
       `<p class="muted">Field centre RA ${d.field.ra}°, Dec ${d.field.dec}°, ${d.field.size_deg}° wide, ${d.field.pixscale_arcsec}″ per grid pixel (a SPHEREx detector pixel is 6.15″).` +
       (d.known && d.known.sep_arcsec != null ? ` Catalogue position differs by ${d.known.sep_arcsec}″.` : "") + (m.fit_rms_arcsec != null ? ` Straight-line fit scatter ${m.fit_rms_arcsec}″.` : "") + `</p></details>` +
       `<div class="actions"><button class="btn primary" type="button" id="cardBlink">${d.deep ? "Blink first vs last visit, added up" : d.sightings > 1 ? "Blink first vs last sighting" : "Show the picture it is in"}</button>` +
       `<button class="btn ghost" type="button" id="cardCopy">Copy coordinates</button></div>`;
+    if ($("fullSpecBtn")) $("fullSpecBtn").addEventListener("click", () => measureFullSpectrum(d, T.color));
+    wireFullSpec(d.full_spectrum, nameOf(d));
     $("cardBlink").addEventListener("click", () => {
       if (d.deep) {                                            // seen only when a visit's exposures are added together
         BX.setDepth("visit");
@@ -378,6 +515,6 @@
   $("showDoodles").addEventListener("change", (e) => { st.showDoodles = e.target.checked; renderDoodleLayer(e.target.checked); });
   $("cardClose").addEventListener("click", closeCard);
   $("card").addEventListener("click", (e) => { if (e.target === $("card")) closeCard(); });     // click on the backdrop
-  $("card").addEventListener("close", () => { st.pickedDoodle = null; renderBoard(); });
+  $("card").addEventListener("close", () => { st.pickedDoodle = null; st.pickedSpot = null; renderBoard(); });
   renderLegend(); wireTips(); wireIntro(); renderBoard();
 })();

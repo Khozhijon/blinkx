@@ -59,9 +59,10 @@ More screenshots are in `submission/screens/`.
 | Display | Brightness, black level, three colour maps, optional brightness matching between dates, smooth or raw pixels. |
 | Add exposures together | "Exposures": one at a time, added up per visit, or all added up. The middle value of each pixel is used, so cosmic rays and passing asteroids drop out and the noise falls roughly with the square root of the number of exposures. Every view (blink, swipe, difference, time-lapse) then works on the deep pictures. |
 | Gaia overlay | Stars of ESA's Gaia DR3 catalogue, each drawn where its measured motion puts it on the date of the picture on screen. Fast stars get a line to where they will be in ten years. Pointing at a ring gives the star's brightness, motion and distance. |
-| Spectrum and light curve | Every found object gets its brightness at each wavelength (a spectrum made on the fly from its own exposures), and brightness changers get their brightness at each visit. |
+| Spectra on the fly | **Any spot, 0.75–5.0 µm.** "Spectrum of the centre", the "spectrum" link beside any mark you place, or the Object Card of a star or brown dwarf: Blink X reads one visit's exposures from all six detectors (about a hundred), measures the brightness on the spot in each, and draws the spectrum with a plain-language reading. A drifting object is followed along its drift; a spot pointed at by hand is first moved onto the nearest source. The numbers download as CSV. Every found object also gets the spectrum of the band on screen from its own exposures, and brightness changers get their brightness at each visit. |
 | Works when NASA's search is down | A record of where all 101,101 SPHEREx pointings looked, built from NASA's open AWS bucket, lets Blink X work out which exposures cover a position without IRSA's search service. Each exposure is still confirmed from its own FITS header. |
 | Examples | Ten targets saved as static files (the challenge's five test objects among them), so the demo still works if the archive is slow or down. |
+| Embed anywhere | Every view is a URL (`?ra=…&dec=…`, `?q=name`, `?ex=example`, plus band, size, mode and the two pictures). Add `embed=1` and only the instrument is shown, sized for an iframe; "Copy embed code" writes that iframe for the view on screen. |
 | Extras | Labels for known asteroids and comets in the field at that moment (IMCCE SkyBoT); mark suspected movers and copy their coordinates; every view has a shareable link. |
 
 ## Design: "Infrared Observatory"
@@ -123,6 +124,32 @@ wrong. On the saved CO₂-band field the interstellar comet 3I/ATLAS comes out a
 brighter at 4.25 µm than next to it: carbon dioxide gas glows at 4.26 µm. Repeat visits to the
 same wavelength are combined first, so a change with time is not read as colour
 (`backend/detect.py: spectrum`, tested in `tests/test_detect.py`).
+
+**The full spectrum, on the fly.** During one visit a spot of sky crosses all six SPHEREx detectors,
+so one visit's exposures hold its whole 0.75–5.0 µm spectrum (the "102 colours"), taken within a
+couple of weeks. `backend/spectra.py` picks the visit that covers the most bands (in the deep fields
+near the ecliptic poles, where SPHEREx never stops looking, the best month), reads up to 24
+exposures per band spread evenly in wavelength, and sums the light in a 9.2″ circle on the spot in
+each (`GET /api/spectrum?ra=…&dec=…`, about half a minute). Three rules keep it honest:
+
+- A band counts as the object's only if, in that band's exposures added together, a source sits
+  on the expected spot. Otherwise its dots are drawn hollow and the text says whose light they
+  are: the sky's, or a neighbour's inside the circle, with its distance.
+- An object with a measured drift is followed: the circle moves with it from exposure to exposure.
+- A star bright enough to overload the detector gets no reading of its ups and downs, only a warning.
+
+What it shows on the challenge's objects: Epsilon Indi B dips at 1.4 and 1.9 µm (water vapour) and
+at 3.3 µm (methane) and peaks near 4.0 µm at about 50 mJy, the textbook shape of a brown dwarf.
+WISE 0855 is on its spot only from 3.8 to 5.0 µm, about 0.6 mJy at 4.5 µm; at shorter wavelengths
+the light in the circle belongs to a star 6″ away. RW Aurigae keeps brightening toward 5 µm, the
+extra infrared of warm dust around a young star. Barnard's Star and R Draconis overload the
+detector, and the card says so. These are quick looks, not calibrated measurements: there is no
+aperture correction, and the bands are photographed on different days of the visit, so a star that
+changes brightness can show steps between bands (the card says that too).
+
+![The full spectrum of Epsilon Indi B, measured on the fly: water dips at 1.4 and 1.9 µm, methane at 3.3 µm](submission/screens/new-spectrum-eps-indi-b.png)
+
+![WISE 0855: its own light only beyond 3.8 µm; the hollow dots are a neighbour's](submission/screens/new-spectrum-wise-0855.png)
 
 Flagged objects are then checked against catalogues (`backend/catalogs.py`): IMCCE SkyBoT and
 JPL Horizons for asteroids and comets, SIMBAD for fast-moving and variable stars. A match is
@@ -240,6 +267,7 @@ browser (plain HTML/JS, canvas)
    │  /api/frames    date + wavelength of each one      FITS headers  ┐ HTTP range requests on the
    │  /api/frame     one aligned cutout, as numbers     pixel rows    ┘ NASA copy on AWS (S3)
    │  /api/known-objects  catalogued asteroids/comets   IMCCE SkyBoT
+   │  /api/spectrum  one spot in all six colour bands   the same files, about 100 small cutouts
    ▼
 FastAPI backend (backend/) with an on-disk cache
 ```
@@ -292,6 +320,9 @@ FLAGS decoder matches it bit for bit.
 - The Gaia overlay is read from the VizieR catalogue service; the saved examples carry their own copy.
 - In SPHEREx's two deep fields (near the ecliptic poles) a spot has tens of thousands of exposures;
   Blink X shows an even sample in time.
+- The full spectrum is a quick look: light summed in a 9.2″ circle with no aperture correction, so
+  close neighbours add theirs (the card names them when it can). It is offered for things that stay
+  put or drift slowly; asteroids and comets cross the field too fast for one visit to cover all bands.
 - "Mark a mover" keeps marks on your own device; there is no shared list yet.
 
 ## Deploy
@@ -311,7 +342,8 @@ with no backend at all, and live search wakes up in the background.
 
 ```
 backend/     FastAPI app: spherex.py (archive access + image maths), pointings.py (which exposures cover a position,
-             without IRSA), detect.py (change detection, deep search, spectra), catalogs.py (known-object checks),
+             without IRSA), detect.py (change detection, deep search, band spectra), spectra.py (the full 0.75–5 µm
+             spectrum of one spot), catalogs.py (known-object checks),
              gaia.py (Gaia DR3 stars), simulate.py (the simulated demo), resolver.py, skybot.py, cache.py, main.py
 frontend/    index.html, style.css (design tokens + components), app.js (viewer), doodles.js (Sky Doodles),
              tools.js (Sky Code, exports, scientist view), landing.js (the sky map), config.js, examples/

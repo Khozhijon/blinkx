@@ -6,6 +6,7 @@ produced by the same code path as the live API (backend.spherex.get_frame).
 
     python scripts/build_examples.py            # rebuild all
     python scripts/build_examples.py vesta      # rebuild the ones whose slug contains "vesta"
+    python scripts/build_examples.py --spectra  # keep pictures and doodles, measure only the full spectra again
 """
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from backend import main as api  # noqa: E402
-from backend import catalogs, detect, gaia, skybot, spherex as sx  # noqa: E402
+from backend import catalogs, detect, gaia, skybot, spectra, spherex as sx  # noqa: E402
 
 OUT = ROOT / "frontend" / "examples"
 DEFS = ROOT / "scripts" / "examples.json"
@@ -84,6 +85,26 @@ def build_simulated(ex: dict) -> dict:
         "checked": {"skybot": None, "simbad": None, "horizons": False}, "truth": sim["truth"],
         "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "source": "SIMULATED — not NASA data",
     }
+
+
+def add_spectra(bundle: dict, ex: dict) -> None:
+    """Full 0.75-5 micron spectra, measured the same way the live API does it: one for every doodle that stays
+    put or drifts slowly, and one for the target itself where the example asks for it ("spectrum": true)."""
+    if bundle.get("simulated"):
+        return
+    for d in bundle["doodles"]:
+        args = spectra.doodle_args(d)
+        if args:
+            try:
+                d["full_spectrum"] = spectra.full_spectrum(*args)
+            except Exception as exc:  # noqa: BLE001 - the archive is not answering: the card will offer to measure it live
+                print(f"  (no full spectrum for {d['id']}: {type(exc).__name__}: {exc})")
+    if ex.get("spectrum"):
+        t = bundle["target"]
+        try:
+            bundle["spectrum"] = spectra.full_spectrum(round(t["ra"], 5), round(t["dec"], 5), 0.0, 0.0, None, True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  (no spectrum of the target for {ex['slug']}: {type(exc).__name__}: {exc})")
 
 
 def build(ex: dict) -> dict:
@@ -177,16 +198,27 @@ def build(ex: dict) -> dict:
     if known:
         bundle["known"] = known
         bundle["known_default"] = bool(ex.get("known_default", False))
+    add_spectra(bundle, ex)
     return bundle
 
 
 def main() -> None:
     defs = json.loads(DEFS.read_text())
-    want = sys.argv[1:]
+    only_spectra = "--spectra" in sys.argv[1:]  # keep the saved pictures and doodles, (re)measure only the spectra
+    want = [a for a in sys.argv[1:] if not a.startswith("--")]
     OUT.mkdir(parents=True, exist_ok=True)
     for ex in defs:
         path = OUT / f"{ex['slug']}.json"
         if want and not any(w in ex["slug"] for w in want):
+            continue
+        if only_spectra:
+            if not path.exists() or ex.get("simulated"):
+                continue
+            bundle = json.loads(path.read_text())
+            add_spectra(bundle, ex)
+            path.write_text(json.dumps(bundle, separators=(",", ":"), allow_nan=False))
+            got = [d["id"] for d in bundle["doodles"] if d.get("full_spectrum")] + (["target"] if bundle.get("spectrum") else [])
+            print(f"{ex['slug']:24s} spectra: {', '.join(got) or 'none'}  {path.stat().st_size/1024:.0f} kB")
             continue
         bundle = build(ex)
         path.write_text(json.dumps(bundle, separators=(",", ":"), allow_nan=False))

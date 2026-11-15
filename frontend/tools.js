@@ -204,6 +204,7 @@
   const copy = async (text, ok) => { try { await navigator.clipboard.writeText(text); BX.toast(ok); } catch (_) { window.prompt("Copy:", text); } };
   $("copyCode").addEventListener("click", () => st.skyCode && copy(st.skyCode, "Sky Code copied. Paste it anywhere; anyone can open it here."));
   $("copyCodeUrl").addEventListener("click", () => st.skyCode && copy(skyUrl(st.skyCode), "Link copied. It opens this exact view."));
+  $("copyEmbed").addEventListener("click", () => st.target && copy(BX.embedCode(), "Embed code copied. Paste it into any web page to show this view there."));
   $("openCodeForm").addEventListener("submit", (e) => { e.preventDefault(); const v = $("openCode").value.trim(); if (v) openSky(v.includes("sky=") ? decodeURIComponent(v.split("sky=")[1].split("&")[0]) : v).then((ok) => { if (ok) { $("openCode").value = ""; $("viewer").scrollIntoView({ behavior: "smooth", block: "start" }); } }); });
   $("dlPng").addEventListener("click", async () => { try { download(`blinkx-doodles-${slug()}.png`, "image/png", await svgToPng(doodleMapSvg())); } catch (e) { BX.toast(e.message); } });
   $("dlSvg").addEventListener("click", () => download(`blinkx-doodles-${slug()}.svg`, "image/svg+xml", doodleMapSvg()));

@@ -19,7 +19,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import catalogs, detect, gaia, pointings, resolver, skybot, spherex as sx
+from . import catalogs, detect, gaia, pointings, resolver, skybot, spectra, spherex as sx
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
@@ -190,6 +190,18 @@ def api_doodles(ra: float = RA, dec: float = DEC, size: float = 0.1, ids: str = 
     res["expected"] = catalogs.expected_movers(res["doodles"], ra, dec, size, float(sum(f["mjd"] for f in encoded) / len(encoded)))
     sx.cache.put_json(ck, res)
     return res
+
+
+@app.get("/api/spectrum")
+def api_spectrum(ra: float = RA, dec: float = DEC, pm_e: float = Query(0.0, ge=-30, le=30), pm_n: float = Query(0.0, ge=-30, le=30), t0: float | None = Query(None, ge=58000, le=70000),
+                 snap: bool = False):
+    """The brightness of one spot in all six SPHEREx colour bands (one visit), measured on the fly.
+
+    ``pm_e``/``pm_n`` (arcseconds a year, east and north) and ``t0`` (MJD at which ra/dec hold) let the
+    measuring spot follow an object that drifts. ``snap=1``: the spot was pointed at by hand, so move it
+    onto the nearest source (at most one SPHEREx pixel away)."""
+    ra, dec = round(ra, 5), round(dec, 5)
+    return _archive(spectra.full_spectrum, ra, dec, round(pm_e, 2), round(pm_n, 2), t0, bool(snap) and not (pm_e or pm_n))
 
 
 @app.get("/api/gaia")

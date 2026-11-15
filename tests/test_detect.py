@@ -158,3 +158,59 @@ def test_deep_search_finds_a_mover_too_faint_for_single_exposures():
     # the same field with nothing moving: no deep find
     still, _ = _made_up_visits(mover_peak=4.5, shift_px=0.0)
     assert not [d for d in detect.detect(still, 133.76, -7.24, 0.1)["doodles"] if d.get("deep")]
+
+
+def test_full_spectrum_reading_is_careful():
+    from backend import spectra
+
+    def sp(points, bands, neighbour=None):
+        out = {"points": points, "bands": bands, "neighbour_arcsec": neighbour, "visit": {"first": "2025-10-01", "last": "2025-10-14", "exposures": len(points)}}
+        out["line"] = spectra._line(points)
+        return out
+
+    wl = [0.8 + 0.05 * i for i in range(84)]  # 0.8 ... 4.95
+    band = lambda w: 1 if w < 1.1 else 2 if w < 1.65 else 3 if w < 2.42 else 4 if w < 3.82 else 5 if w < 4.42 else 6  # noqa: E731
+    allbands = [{"band": b, "range_um": r, "exposures": 14, "on_spot": True} for b, r in zip(range(1, 7), ([0.75, 1.1], [1.1, 1.65], [1.65, 2.42], [2.42, 3.82], [3.82, 4.42], [4.42, 5.0]))]
+    # a cool object: bright peaks, deep dips where water (1.4, 1.9) and methane (3.3) absorb
+    cool = lambda w: 3.0 if 1.36 <= w <= 1.45 or 1.8 <= w <= 1.98 or 3.15 <= w <= 3.45 else 20.0  # noqa: E731
+    text = spectra._read(sp([{"wl": w, "mjy": cool(w), "err": 0.2, "band": band(w), "frame": str(i), "ours": True} for i, w in enumerate(wl)], allbands))
+    assert "water vapour absorbs" in text and "methane absorbs" in text and "one visit" in text
+    # an object seen in the two longest bands only, with a neighbour 8 arcsec away: say so, and claim nothing below 3.8 microns
+    faint = [{"wl": w, "mjy": 0.5 if w >= 3.82 else 0.4, "err": 0.1, "band": band(w), "frame": str(i), "ours": w >= 3.82} for i, w in enumerate(wl)]
+    bands = [dict(b, on_spot=b["band"] >= 5) for b in allbands]
+    text = spectra._read(sp(faint, bands, neighbour=7.6))
+    assert "only from 3.8 to 5.0" in text and "neighbour 8″ away" in text and "absorbs" not in text
+    assert all(p[0] >= 3.82 for p in spectra._line(faint))
+    # a star far too bright: no reading of the wiggles
+    text = spectra._read(sp([{"wl": w, "mjy": 9000.0 if i % 3 else 4000.0, "err": 5.0, "band": band(w), "frame": str(i), "ours": True} for i, w in enumerate(wl)], allbands))
+    assert "overload" in text and "absorbs" not in text
+    # nothing on the spot at all
+    text = spectra._read(sp([dict(p, ours=False) for p in faint], [dict(b, on_spot=False) for b in allbands]))
+    assert "Nothing sits on this exact spot" in text
+
+
+def test_full_spectrum_choices():
+    from backend import spectra
+
+    # a field SPHEREx watches without a break: take the month that covers every colour band, not the whole year
+    long_visit = [{"mjd": 61000.0 + 0.5 * i, "detector": 1 + (i % 6 if 200 <= i < 260 else i % 3)} for i in range(400)]
+    month = spectra._best_month(long_visit)
+    assert month[-1]["mjd"] - month[0]["mjd"] <= spectra.MAX_SPAN_DAYS and len({f["detector"] for f in month}) == 6
+    short = [{"mjd": 61000.0 + i, "detector": 1 + i % 6} for i in range(12)]
+    assert spectra._best_month(short) is short
+    # an arrow is followed along its drift (east and north, arcseconds a year); a pulse stays put; movers and made-up objects get none
+    arrow = {"type": "arrow", "motion": {"rate_arcsec_per_year": 10.0, "pa_deg": 90.0}, "points": [{"ra": 10.0, "dec": 5.0, "t": 61000.0}, {"ra": 10.003, "dec": 5.0, "t": 61365.25}]}
+    assert spectra.doodle_args(arrow) == (10.003, 5.0, 10.0, 0.0, 61365.25)
+    assert spectra.doodle_args(dict(arrow, type="pulse")) == (10.0, 5.0, 0.0, 0.0, None)
+    assert spectra.doodle_args(dict(arrow, type="spark")) is None and spectra.doodle_args(dict(arrow, simulated=True)) is None
+    assert spectra._where(10.0, 0.0, 3.6, -3.6, 61000.0, 61365.25) == (10.001, -0.001)
+    # seen in bands 1, 3, 5 and 6 only: name the stretches, do not claim the gaps
+    bands = [{"band": b, "range_um": r, "exposures": 14, "on_spot": b in (1, 3, 5, 6)} for b, r in zip(range(1, 7), ([0.75, 1.1], [1.1, 1.65], [1.65, 2.42], [2.42, 3.82], [3.82, 4.42], [4.42, 5.0]))]
+    pts = [{"wl": 0.8 + 0.05 * i, "mjy": 5.0, "err": 0.1, "band": next(b["band"] for b in bands if b["range_um"][0] <= 0.8 + 0.05 * i <= b["range_um"][1] + 0.05), "frame": str(i), "ours": True} for i in range(84)]
+    for p in pts:
+        p["ours"] = p["band"] in (1, 3, 5, 6)
+    sp = {"points": pts, "bands": bands, "neighbour_arcsec": None, "snapped_arcsec": 4.4, "visit": {"first": "2026-01-01", "last": "2026-01-20", "exposures": 84}}
+    sp["line"] = spectra._line(pts)
+    text = spectra._read(sp)
+    assert "only at 0.8–1.1, 1.6–2.4 and 3.8–5.0 µm" in text or "only at 0.8–1.1, 1.7–2.4 and 3.8–5.0 µm" in text, text
+    assert text.startswith("Measured on the source 4″ from the spot you chose.")

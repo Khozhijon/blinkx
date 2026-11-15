@@ -18,13 +18,15 @@ Blink X is a public web tool that lets anyone see how the sky changes in NASA's 
 Enter a name or sky coordinates (RA and Dec) and it finds every SPHEREx exposure of that patch,
 lines the images up, and plays them like a little video: blink, swipe, side by side, difference
 or time-lapse. It then finds what moved or changed by itself, draws each change as a "Sky Doodle",
-measures its speed and direction, checks catalogues of known objects, and plots the object's
-spectrum on the fly. Nothing is called a discovery: an unexplained change is labelled a candidate.
+measures its speed and direction, checks catalogues of known objects, and measures the object's
+full 0.75–5 micrometre spectrum on the fly. Nothing is called a discovery: an unexplained change
+is labelled a candidate.
 
 We tested it on the five objects the challenge names. Blink X finds Barnard's Star and Epsilon
 Indi B moving at their catalogued speeds, sees RW Aurigae grow 59% brighter in a year, and finds
 WISE 0855, the coldest brown dwarf known, which is too faint for a single exposure: it appears
-only when the tool adds each visit's exposures together.
+only when the tool adds each visit's exposures together. Its spectrum of Epsilon Indi B shows the
+water and methane dips of a brown dwarf.
 
 SPHEREx re-photographs the whole sky every six months in 102 infrared colours, far more than any
 one person can check. Blink X turns that archive into something a student with a phone can search
@@ -64,15 +66,29 @@ motion in arcseconds and SPHEREx pixels, a confidence score, the catalogue check
 IMCCE SkyBoT, SIMBAD) and a spectrum built from the object's own exposures. Known objects are
 named; everything else is a candidate, with the reasons it might be nothing.
 
+**Spectra on the fly.** During one visit a spot of sky crosses all six SPHEREx detectors, so one
+visit holds its whole 0.75–5.0 micrometre spectrum. One click ("Spectrum of the centre", any mark
+you place, or the Object Card of a star) reads about a hundred exposures, measures the brightness
+on the spot in each, and draws the spectrum in about half a minute, with a plain-language reading
+and a CSV download. An object that drifts is followed along its drift. A colour band counts as
+the object's only if a source really sits on its spot there; otherwise the dots are drawn hollow
+and the text says whose light they are. A star bright enough to overload the detector gets a
+warning instead of a reading.
+
 **Tested on the challenge's five objects.** Each is a one-click target, and can be typed as the
 challenge writes it. What Blink X reports by itself:
 
 - Barnard's Star: moving 10.0 ± 1.2 arcseconds a year (catalogue: 10.39).
-- Epsilon Indi B: moving 4.6 ± 0.4 arcseconds a year (catalogue: 4.68).
+- Epsilon Indi B: moving 4.6 ± 0.4 arcseconds a year (catalogue: 4.68). Its full spectrum dips
+  at 1.4 and 1.9 micrometres (water vapour) and at 3.3 (methane) and peaks near 4.0: the shape
+  of a brown dwarf.
 - WISE 0855: found only in the added-up visits, moving 8.2 ± 0.6 arcseconds a year (catalogue:
-  8.15). Its spectrum rises from 0.24 mJy at 3.9 micrometres to 0.53 mJy at 4.3, as a very cool
-  object's should. ESA's Gaia catalogue does not list it at all.
+  8.15). Its spectrum shows it only from 3.8 to 5.0 micrometres, about 0.6 mJy at 4.5 (WISE
+  measured about 0.45 at 4.6); at shorter wavelengths the light on that spot belongs to a star
+  6 arcseconds away, and the card says so. ESA's Gaia catalogue does not list it at all.
 - RW Aurigae: 59% brighter in September 2026 than in September 2025, with a brightness chart.
+  Its spectrum keeps rising toward 5 micrometres: the extra infrared of warm dust around a
+  young star.
 - R Draconis: no doodle. The star overloads the detector; Blink X measures changes of 10–20%
   that it cannot trust, and says so instead of guessing.
 
@@ -100,17 +116,20 @@ layout of the six detectors. With that record it works out which exposures cover
 without the search service, then confirms each one from its own file. On 38 positions it
 proposed 99.9% of the 14,635 exposures the archive had listed.
 
-**Sharing and science tools.** One short "Sky Code" or link reproduces any view. Results export
-as JSON, CSV, SVG or PNG. A Scientist view shows coordinates, wavelengths and signal-to-noise.
+**Sharing, embedding and science tools.** One short "Sky Code" or link reproduces any view, and
+coordinates work in the URL. Add `embed=1` and only the instrument is shown, sized for an iframe:
+"Copy embed code" writes that iframe, so any website or class page can show a live Blink X view.
+Results export as JSON, CSV, SVG or PNG. A Scientist view shows coordinates, wavelengths and
+signal-to-noise.
 
 **Benefits.** Students and the public can watch real motion in space within seconds, on a phone.
 Teachers get the Pluto discovery method with this year's NASA data. Researchers get a quick
 visual check of any position across SPHEREx epochs, with measurements they can export.
 
 **What we hope to achieve.** A shared list where volunteers flag candidates for astronomers to
-review, the full 102-colour spectrum of every object, and a WISE overlay next to the Gaia one.
+review, calibrated (aperture-corrected) spectra, and a WISE overlay next to the Gaia one.
 
-**Tools.** Python 3.12, FastAPI, Astropy, photutils, NumPy, SciPy, httpx, Pillow, pytest (32
+**Tools.** Python 3.12, FastAPI, Astropy, photutils, NumPy, SciPy, httpx, Pillow, pytest (34
 tests); HTML, CSS, JavaScript; Aladin Lite; hosted free on GitHub Pages and Render.
 Code: https://github.com/Khozhijon/blinkx
 

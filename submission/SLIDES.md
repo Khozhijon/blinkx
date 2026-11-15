@@ -27,8 +27,10 @@
   “candidate” for anything unexplained.
 - **Add exposures together** (per visit or all of them) to reach objects too faint for one
   exposure; lay **ESA Gaia** stars over the picture, each moved to the picture's date.
-- Choose the infrared band and field size, share any view with one **Sky Code**, export JSON,
-  CSV, SVG or PNG.
+- **Spectra on the fly**: one click measures the full 0.75–5 µm spectrum of any spot from about a
+  hundred exposures (Epsilon Indi B shows a brown dwarf's water and methane dips), with a CSV download.
+- Choose the infrared band and field size, share any view with one **Sky Code**, **embed** it in
+  any website with one line (`embed=1`), export JSON, CSV, SVG or PNG.
 - Visual: three screenshots from `submission/screens/` — comet with its doodle
   (`after-desktop-2-viewer`), Object Card (`after-desktop-4-card`), all five doodles on the
   simulated field (`after-desktop-6-simulated`, labelled simulated).
@@ -55,6 +57,6 @@
 - Anyone with a phone can watch a comet from another star cross the sky, or find an asteroid by eye.
 - Classrooms: the Pluto discovery method, hands-on, with this year's NASA data.
 - Researchers: a two-second visual check of any position across SPHEREx epochs.
-- Next: a shared list where citizen scientists flag candidates for astronomers; the full
-  102-colour spectrum of every object; a WISE overlay; each new SPHEREx release adds another epoch.
+- Next: a shared list where citizen scientists flag candidates for astronomers; calibrated
+  spectra; a WISE overlay; each new SPHEREx release adds another epoch.
 - Close with the URL and the repository link.
