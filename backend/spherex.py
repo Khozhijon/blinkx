@@ -29,7 +29,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS, FITSFixedWarning
 
-from . import cache
+from . import cache, pointings
 
 warnings.simplefilter("ignore", FITSFixedWarning)
 
@@ -273,15 +273,24 @@ def search(ra: float, dec: float) -> dict:
         _refresh_in_background(ck, ra, dec)
         return {**seed, "saved": True}
     old = cache.get_json_stale(ck)
-    if old is not None and _irsa_recently_failed():
-        return {**old, "stale": True}
+    if _irsa_recently_failed():
+        if old is not None:
+            return {**old, "stale": True}
+        worked_out = pointings.covering(ra, dec)
+        if worked_out is not None:
+            return worked_out
     try:
         res = _sia_all(ra, dec)
     except ArchiveError:
         _note_irsa_failure()
-        if old is None:
+        if old is not None:
+            return {**old, "stale": True}
+        # IRSA's search is down and nothing is saved for this spot: work the list out from the record of
+        # where SPHEREx pointed (seed/pointings.npz). Every exposure is still confirmed from its own header.
+        worked_out = pointings.covering(ra, dec)
+        if worked_out is None:
             raise
-        return {**old, "stale": True}
+        return worked_out
     cache.put_json(ck, res)
     return res
 
@@ -298,6 +307,7 @@ def band_exposures(ra: float, dec: float, detector: int) -> dict:
             "exposures": [e for e in base["exposures"] if e["detector"] == detector],
             "deep": False,
             "stale": bool(base.get("stale")),
+            "from_index": bool(base.get("from_index")),
         }
     ck = f"siaband2/{ra:.5f}_{dec:.5f}_D{detector}"
     hit = cache.get_json(ck, max_age=6 * 3600)
@@ -344,7 +354,26 @@ class ExposureHeader:
         return self.data_offset + math.ceil(nbytes / BLOCK) * BLOCK
 
 
-def read_header(key: str) -> ExposureHeader:
+_real_key: dict[str, str] = {}  # where a file really is, when it was not under the expected processing version
+
+
+def read_header(key: str, alt_keys: tuple | list = ()) -> ExposureHeader:
+    """Header of one exposure. ``alt_keys`` are the same exposure under other processing versions,
+    tried in turn when the first is not there (only exposures proposed by the pointing index have them)."""
+    if key in _real_key:
+        key, alt_keys = _real_key[key], ()
+    if alt_keys:
+        try:
+            return read_header(key)
+        except ArchiveError as first:
+            for other in alt_keys:
+                try:
+                    eh = read_header(other)
+                except ArchiveError:
+                    continue
+                _real_key[key] = other
+                return eh
+            raise first
     ck = "hdr/" + key.rsplit("/", 1)[-1]
     raw = cache.get_bytes(ck)
     if raw is None:
@@ -456,7 +485,7 @@ def wavelength_at(header: fits.Header, table, x0: float, y0: float) -> tuple[flo
 
 def read_exposure_meta(exp: dict, ra: float, dec: float) -> dict:
     """Header-derived facts about one exposure at the target position (no pixels downloaded)."""
-    eh = read_header(exp["key"])
+    eh = read_header(exp["key"], exp.get("alt_keys") or ())
     h = eh.header
     wcs = WCS(h)
     x, y = (float(v) for v in wcs.all_world2pix([[ra, dec]], 0, quiet=True)[0])
@@ -481,8 +510,8 @@ def read_exposure_meta(exp: dict, ra: float, dec: float) -> dict:
         "psf_fwhm_arcsec": float(h["PSF_FWHM"]) if "PSF_FWHM" in h else None,
         "quality": str(h.get("L2DQAFLG", "")).strip(),
         "pipeline_version": eh.version,
-        "file": exp["key"].rsplit("/", 1)[-1],
-        "irsa_url": IRSA_BASE + exp["key"],
+        "file": eh.key.rsplit("/", 1)[-1],
+        "irsa_url": IRSA_BASE + eh.key,
     }
 
 
@@ -508,11 +537,13 @@ def list_frames(ra: float, dec: float, detector: int, exposures: list[dict] | No
         try:
             return read_exposure_meta(exp, ra, dec)
         except Exception as exc:  # noqa: BLE001
-            return {"id": exp["id"], "error": str(exc)}
+            # the pointing index proposes every detector of an exposure; a file that is simply not there is not an error
+            gone = bool(exp.get("approx")) and ("HTTP 404" in str(exc) or "HTTP 403" in str(exc))
+            return {"id": exp["id"], "error": str(exc), "missing": gone}
 
     with ThreadPoolExecutor(16) as pool:
         metas = list(pool.map(one, todo))
-    failed = [m for m in metas if "error" in m]
+    failed = [m for m in metas if "error" in m and not m.get("missing")]
     frames = [m for m in metas if "error" not in m and m["on_detector"]]
     frames.sort(key=lambda m: m["mjd"])
     if not failed:
@@ -638,7 +669,7 @@ def _inpaint(img: np.ndarray, bad: np.ndarray, bloom: np.ndarray) -> np.ndarray:
 def make_frame(exp: dict, ra: float, dec: float, size_deg: float, n: int | None = None) -> dict:
     """Resample one exposure onto the common north-up grid. Returns metadata + float image."""
     n = n or grid_size(size_deg)
-    eh = read_header(exp["key"])
+    eh = read_header(exp["key"], exp.get("alt_keys") or ())
     h = eh.header
     wcs = WCS(h)
     gra, gdec = _tangent_grid(ra, dec, size_deg, n)

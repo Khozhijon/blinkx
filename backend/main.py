@@ -19,7 +19,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import catalogs, detect, resolver, skybot, spherex as sx
+from . import catalogs, detect, pointings, resolver, skybot, spherex as sx
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
@@ -109,6 +109,9 @@ def api_search(ra: float = RA, dec: float = DEC):
         "stale": bool(res.get("stale")),
         # set when the exposure list came from the saved index rather than a live IRSA query
         "saved_on": _iso(float(res["saved_at"]) / 86400.0 + 40587.0)[:10] if res.get("saved") and res.get("saved_at") else None,
+        # set when IRSA's search did not answer and the list was worked out from the record of where SPHEREx pointed
+        "from_index": bool(res.get("from_index")),
+        "index_to": _iso(pointings.last_mjd())[:10] if res.get("from_index") else None,
     }
 
 
@@ -125,6 +128,7 @@ def api_frames(ra: float = RA, dec: float = DEC, band: int = Query(2, ge=1, le=6
         "total_in_band": len(res["exposures"]),
         "deep": res["deep"],
         "stale": bool(res.get("stale")),
+        "from_index": bool(res.get("from_index")),
         "frames": frames,
     }
 

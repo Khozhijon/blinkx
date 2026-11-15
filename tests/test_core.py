@@ -172,10 +172,21 @@ def test_search_falls_back_to_saved_result_when_irsa_is_down(tmp_path, monkeypat
     res = sx.search(10.0, 20.0)
     assert res["stale"] is True and res["exposures"] == rows
     assert sx.band_exposures(10.0, 20.0, 2)["stale"] is True
+    # nothing saved for this spot: the list is worked out from the pointing index instead, and is not cached as if IRSA had said it
+    from backend import pointings
+
+    worked_out = {"exposures": [dict(rows[0], id="bD2", approx=True)], "truncated": False, "from_index": True}
+    monkeypatch.setattr(pointings, "covering", lambda ra, dec, **kw: worked_out)
+    assert sx.search(11.0, 20.0)["from_index"] is True and cache.get_json("sia3/11.00000_20.00000") is None
+    assert sx.band_exposures(11.0, 20.0, 2)["from_index"] is True
+    # without the index either, the error must surface
+    monkeypatch.setattr(pointings, "covering", lambda ra, dec, **kw: None)
+    monkeypatch.setattr(sx, "_irsa_down_until", 0.0)
     with pytest.raises(sx.ArchiveError):
-        sx.search(11.0, 20.0)  # nothing saved for this spot: the error must surface
+        sx.search(11.0, 20.0)
 
     # when IRSA answers, the fresh result is used and cached
+    monkeypatch.setattr(sx, "_irsa_down_until", 0.0)
     monkeypatch.setattr(sx, "_sia_all", lambda ra, dec, detector=None: {"exposures": rows * 1, "truncated": False})
     res = sx.search(11.0, 20.0)
     assert "stale" not in res and cache.get_json("sia3/11.00000_20.00000") is not None
@@ -219,3 +230,50 @@ def test_saved_index_is_used_first_while_it_is_recent(tmp_path, monkeypatch):
     cache.put_seed("sia3/12.00000_20.00000", {"exposures": rows, "truncated": False, "saved_at": int(_time.time()) - 60 * 86400})
     res = sx.search(12.0, 20.0)
     assert res["exposures"] == fresh and "saved" not in res
+
+
+def test_pointing_index_finds_what_irsa_listed():
+    """The record of where SPHEREx pointed proposes (almost) every exposure IRSA listed for Barnard's Star, and few others."""
+    import glob
+    import json
+
+    from backend import pointings
+
+    if not pointings.available():
+        pytest.skip("seed/pointings.npz has not been built")
+    path = glob.glob(str(sx.cache.SEED_DIR / "sia3" / "269.44622_4.76878*.json"))
+    if not path:
+        pytest.skip("no saved IRSA list for Barnard's Star")
+    listed = {e["id"] for e in json.load(open(path[0]))["exposures"]}
+    proposed = pointings.covering(269.44622, 4.76878)
+    ids = {e["id"] for e in proposed["exposures"]}
+    assert proposed["from_index"] and len(listed & ids) >= 0.995 * len(listed)
+    assert len(ids) <= 1.4 * len(listed)  # candidates just outside a detector are allowed: the headers decide
+    one = proposed["exposures"][0]
+    assert one["key"].endswith(f"_{one['id']}_spx_{one['key'].split('/')[3]}.fits") and one["approx"] is True
+    assert pointings.covering(269.44622, 4.76878, margin=90.0)["exposures"] == sorted(proposed["exposures"], key=lambda r: (r["mjd"], r["detector"]))
+
+
+def test_pointing_geometry_on_a_made_up_pointing(monkeypatch):
+    """One pointing looking at RA 100, Dec 0 with north up: which detectors see a target depends on where it falls."""
+    import numpy as np
+
+    from backend import pointings
+
+    scale = 6.15 / 3600.0
+    idx = {
+        "week": np.array([0], np.uint16), "pt": np.array([7], np.uint16), "k0": np.array([1], np.uint8), "mjd": np.array([60900.0]),
+        "ra": np.array([100.0]), "dec": np.array([0.0]), "pc": np.array([[-scale, 0.0, 0.0, scale]]), "ver": np.array([[0, 0, -1, -1]], np.int16),
+        "weeks": ["dr1/2025W33_2C"], "versions": ["l2b-v27-2026-228"], "built": np.array(1), "week_versions": {0: {0}},
+        "a0": np.radians(np.array([100.0])), "sin_d0": np.array([0.0]), "cos_d0": np.array([1.0]),
+    }
+    monkeypatch.setattr(pointings, "_index", idx)
+    centre = pointings.covering(100.0, 0.0)["exposures"]
+    assert {(e["obs_id"][-1], e["detector"]) for e in centre} == {("1", 2), ("1", 5), ("2", 2), ("2", 5)}  # exposures 3 and 4 were never taken
+    assert centre[0]["key"] == "dr1/level2/2025W33_2C/l2b-v27-2026-228/2/level2_2025W33_2C_0007_1D2_spx_l2b-v27-2026-228.fits"
+    assert centre[2]["mjd"] == pytest.approx(60900.0 + 128.9 / 86400.0, abs=1e-5)
+    # 2275 pixels along +x (east is -x here, so that is to the west) lies on detectors 3 and 6
+    side = pointings.covering(100.0 - 2275 * scale, 0.0)["exposures"]
+    assert {e["detector"] for e in side} == {3, 6}
+    # ten degrees away: nothing
+    assert pointings.covering(110.0, 0.0)["exposures"] == []

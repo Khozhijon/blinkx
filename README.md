@@ -271,7 +271,7 @@ submission/  project summary, resources list, AI-use note, video script, slide o
 
 ## Credits and licence
 
-Created by Khozhiakbar Khakimov Furkatzhonovich and Francia Constanza Coyotl Cortes (team KhoFra) at the Boston local event, November 2026. Code is released under the MIT
+Created by Khozhiakbar Khakimov Furkatzhonovich and Francia Constanza Coyotl Cortes (team KhoFra) at the Cambridge, MA local event, November 2026. Code is released under the MIT
 licence (see `LICENSE`). SPHEREx data are public NASA data; please credit NASA/JPL-Caltech/IPAC.
 This project is not affiliated with or endorsed by NASA.
 
