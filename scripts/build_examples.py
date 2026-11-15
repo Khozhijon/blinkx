@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from backend import main as api  # noqa: E402
-from backend import skybot, spherex as sx  # noqa: E402
+from backend import catalogs, detect, skybot, spherex as sx  # noqa: E402
 
 OUT = ROOT / "frontend" / "examples"
 DEFS = ROOT / "scripts" / "examples.json"
@@ -61,13 +61,52 @@ def apply_candidate(ex: dict) -> dict:
     return out
 
 
+def build_simulated(ex: dict) -> dict:
+    """The offline demo: a made-up field run through the same detection code. Labelled as simulated everywhere."""
+    from backend import simulate
+
+    sim = simulate.planet_x_field(size_deg=float(ex["size"]), n=192, per_group=2)  # a coarser grid keeps the file small
+    ra, dec, size = float(ex["ra"]), float(ex["dec"]), float(ex["size"])
+    frames = sorted(sim["frames"], key=lambda f: f["mjd"])
+    found = detect.detect(detect.frames_from_encoded(frames, sx.decode_frame), ra, dec, size)
+    for d in found["doodles"]:  # nothing to look up: these objects do not exist
+        d["status"], d["known"], d["checked"] = "candidate", None, []
+        d["simulated"] = True
+        detect.explain(d)
+        d["explain"] = d["explain"].split(" It did not match")[0].split(" The catalogue services")[0] + " (Simulated object: it was put into this made-up field on purpose.)"
+    bands = [{"detector": k, **v, "count": len(frames) if k == 2 else 0, "visits": 4 if k == 2 else 0} for k, v in sx.BANDS.items()]
+    return {
+        "slug": ex["slug"], "title": ex["title"], "blurb": ex["blurb"], "story": ex.get("story", ""), "simulated": True,
+        "target": {"name": ex["name"], "ra": ra, "dec": dec}, "band": 2, "size": size, "mode": ex.get("mode", "blink"),
+        "a": frames[0]["id"], "b": frames[4]["id"], "settings": ex.get("settings", {}),
+        "search": {"ra": ra, "dec": dec, "total": len(frames), "deep": False, "bands": bands, "visits": api._visits([{"mjd": f["mjd"], "detector": 2} for f in frames]), "collections": [], "stale": False, "saved_on": None},
+        "total_in_band": len(frames), "frames": frames, "doodles": found["doodles"], "align": found["align"], "detect_stats": found["stats"],
+        "checked": {"skybot": None, "simbad": None, "horizons": False}, "truth": sim["truth"],
+        "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "source": "SIMULATED — not NASA data",
+    }
+
+
 def build(ex: dict) -> dict:
+    if ex.get("simulated"):
+        return build_simulated(ex)
     ex = apply_candidate(ex)
     ra, dec, band, size = round(ex["ra"], 5), round(ex["dec"], 5), int(ex["band"]), float(ex["size"])
-    search = api.api_search(ra, dec)
-    exposures = {e["id"]: e for e in sx.search_exposures(ra, dec)}
-    listed = sx.list_frames(ra, dec, band)
-    chosen = pick_frames(listed, ex.get("frames"))
+    path = OUT / f"{ex['slug']}.json"
+    old = json.loads(path.read_text()) if path.exists() else None
+    try:
+        search = api.api_search(ra, dec)
+        exposures = {e["id"]: e for e in sx.search_exposures(ra, dec)}
+        listed = sx.list_frames(ra, dec, band)
+        chosen = pick_frames(listed, ex.get("frames"))
+    except Exception as exc:  # noqa: BLE001 - IRSA's search is down: rebuild from the exposure list we already saved
+        if not old:
+            raise
+        print(f"  ({ex['slug']}: IRSA search unavailable ({type(exc).__name__}); reusing the saved exposure list, pixels re-read from AWS)")
+        search = old["search"]
+        exposures = {f["id"]: {"id": f["id"], "obs_id": f["obs_id"], "detector": f["detector"], "collection": f["collection"],
+                               "key": f["irsa_url"].split("/ibe/data/spherex/", 1)[1], "mjd": f["mjd"], "exptime": f["exptime"]} for f in old["frames"]}
+        listed = [None] * old.get("total_in_band", len(old["frames"]))
+        chosen = [{"id": f["id"]} for f in old["frames"]]
     if len(chosen) < 2:
         raise SystemExit(f"{ex['slug']}: fewer than two frames — not a usable example")
 
@@ -98,6 +137,10 @@ def build(ex: dict) -> dict:
                 print(f"  (SkyBoT unavailable for {f['id']}: {exc})")
             known[f["id"]] = objs
 
+    # Sky Doodles: automatic change detection on exactly these frames, then catalogue cross-checks
+    found = detect.detect(detect.frames_from_encoded(frames, sx.decode_frame), ra, dec, size)
+    found["checked"] = catalogs.annotate(found["doodles"], ra, dec, size, predicted=ex.get("predicted"), label=ex.get("object_label"), kind=ex.get("object_kind"))
+
     bundle = {
         "slug": ex["slug"],
         "title": ex["title"],
@@ -113,6 +156,10 @@ def build(ex: dict) -> dict:
         "search": search,
         "total_in_band": len(listed),
         "frames": frames,
+        "doodles": found["doodles"],
+        "align": found["align"],
+        "detect_stats": found["stats"],
+        "checked": found["checked"],
         "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "NASA/IPAC IRSA SPHEREx Level-2 spectral images (collections spherex_dr1, spherex_qr3)",
     }
@@ -134,7 +181,7 @@ def main() -> None:
         path.write_text(json.dumps(bundle, separators=(",", ":"), allow_nan=False))
         f0, f1 = bundle["frames"][0], bundle["frames"][-1]
         print(f"{ex['slug']:24s} {len(bundle['frames']):3d} frames  {f0['date_obs'][:10]} → {f1['date_obs'][:10]}  {path.stat().st_size/1024:.0f} kB")
-    index = [{"slug": e["slug"], "title": e["title"], "blurb": e["blurb"], "kind": e.get("kind", "")} for e in defs if (OUT / f"{e['slug']}.json").exists()]
+    index = [{"slug": e["slug"], "title": e["title"], "blurb": e["blurb"], "kind": e.get("kind", ""), "simulated": bool(e.get("simulated"))} for e in defs if (OUT / f"{e['slug']}.json").exists()]
     (OUT / "index.json").write_text(json.dumps(index, indent=1))
     print("index:", [e["slug"] for e in index])
 

@@ -12,7 +12,7 @@
   const MAX_FRAMES = 72;          // pictures loaded per band (evenly thinned beyond this)
   const VISIT_GAP_DAYS = 20;
   const NODATA = [20, 26, 43];
-  const COL_A = [85, 184, 255], COL_B = [255, 169, 77];
+  const COL_NEW = [255, 64, 200], COL_GONE = [52, 214, 112];   // difference view: magenta = new/brighter, green = gone/dimmer
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const DEFAULTS = { hi: 50, lo: 30, cmap: "gray", match: true, smooth: true, cross: true, known: false, showFilled: false };
 
@@ -21,8 +21,11 @@
     band: 2, size: 0.1, n: 128, frames: [], a: null, b: null,
     mode: "blink", playing: true, phase: 0, timeIdx: 0, speed: 55, arm: "b",
     marking: false, marks: [], knownCache: new Map(), hover: null,
+    split: 0.5, doodles: [], align: {}, checked: null, doodleState: "idle", showDoodles: true, pickedDoodle: null,
     ...DEFAULTS,
   };
+  // Shared with doodles.js (Sky Doodles, Object Cards, exports): state, helpers and a few hooks.
+  const BX = window.BX = { st, hooks: {} };
   let renderCache = new Map();
   let scaleCache = new Map();
   let timer = null;
@@ -197,7 +200,7 @@
       d[p + 3] = 255;
       if (a !== a || b !== b) { d[p] = NODATA[0]; d[p + 1] = NODATA[1]; d[p + 2] = NODATA[2]; continue; }
       const dv = (k * b - a) / noise, mag = Math.abs(dv) - dead;
-      const u = mag <= 0 ? 0 : clamp(Math.asinh(mag / softD) * norm, 0, 1), col = dv >= 0 ? COL_B : COL_A;
+      const u = mag <= 0 ? 0 : clamp(Math.asinh(mag / softD) * norm, 0, 1), col = dv >= 0 ? COL_NEW : COL_GONE;
       const w = u > 0.8 ? (u - 0.8) * 2.2 : 0;                     // strongest changes bleach towards white
       d[p] = col[0] * u + (255 - col[0]) * w * u; d[p + 1] = col[1] * u + (255 - col[1]) * w * u; d[p + 2] = col[2] * u + (255 - col[2]) * w * u;
     }
@@ -225,10 +228,27 @@
     requestAnimationFrame(run); setTimeout(run, 120);            // the timeout covers background tabs
   }
 
-  function paint(pane, cv) {
+  /** Extra x/y shift for a frame whose image coordinates (WCS) disagreed with the star pattern. */
+  function shiftOf(f) {
+    const a = f && st.align[f.id];
+    return a && a.shift_px && (a.shift_px[0] || a.shift_px[1]) ? a.shift_px : null;
+  }
+  function paint(pane, cv, f) {
     const el = $("cv" + pane);
     if (el.width !== cv.width) { el.width = el.height = cv.width; }
-    const ctx = el.getContext("2d"); ctx.imageSmoothingEnabled = false; ctx.drawImage(cv, 0, 0);
+    const ctx = el.getContext("2d"), sh = shiftOf(f); ctx.imageSmoothingEnabled = false;
+    if (sh) { ctx.fillStyle = `rgb(${NODATA})`; ctx.fillRect(0, 0, el.width, el.height); ctx.drawImage(cv, -sh[0], -sh[1]); }
+    else ctx.drawImage(cv, 0, 0);
+  }
+  /** Swipe view: A to the left of the divider, B to the right. */
+  function paintSwipe(ca, cb, A, B) {
+    const el = $("cv0");
+    if (el.width !== ca.width) { el.width = el.height = ca.width; }
+    const ctx = el.getContext("2d"), n = el.width, x = Math.round(st.split * n), sa = shiftOf(A) || [0, 0], sb = shiftOf(B) || [0, 0];
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = `rgb(${NODATA})`; ctx.fillRect(0, 0, n, n);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, x, n); ctx.clip(); ctx.drawImage(ca, -sa[0], -sa[1]); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(x, 0, n - x, n); ctx.clip(); ctx.drawImage(cb, -sb[0], -sb[1]); ctx.restore();
   }
   function blank(pane) {
     const el = $("cv" + pane), ctx = el.getContext("2d");
@@ -240,6 +260,7 @@
     if (st.mode === "side") return [A, B];
     if (st.mode === "time") return [st.frames[st.timeIdx] || null];
     if (st.mode === "diff") return [B];
+    if (st.mode === "swipe") return [st.hover && st.hover.i / st.n < st.split ? A : B];
     return [st.phase ? B : A];
   }
 
@@ -252,8 +273,8 @@
     const label = (f) => f ? `${fmtDate(f.date_obs, sameDay)} · ${fmtWl(f)}` : "";
     if (st.mode === "side") {
       need.push(A, B);
-      if (A && A.z) paint(0, frameCanvas(A, 1)); else blank(0);
-      if (B && B.z) paint(1, frameCanvas(B, scaleFor(B, A))); else blank(1);
+      if (A && A.z) paint(0, frameCanvas(A, 1), A); else blank(0);
+      if (B && B.z) paint(1, frameCanvas(B, scaleFor(B, A)), B); else blank(1);
       cap0 = `<span class="tag a">A</span>${esc(label(A))}`; cap1 = `<span class="tag b">B</span>${esc(label(B))}`;
     } else if (st.mode === "diff") {
       need.push(A, B);
@@ -261,13 +282,17 @@
       cap0 = `<span class="tag d">B − A</span>${esc(fmtDate(B && B.date_obs, sameDay))} minus ${esc(fmtDate(A && A.date_obs, sameDay))}`;
     } else if (st.mode === "time") {
       const f = st.frames[st.timeIdx]; need.push(f);
-      if (f && f.z) paint(0, frameCanvas(f, scaleFor(f, A && A.z ? A : null))); else blank(0);
+      if (f && f.z) paint(0, frameCanvas(f, scaleFor(f, A && A.z ? A : null)), f); else blank(0);
       cap0 = `<span class="tag t">${st.timeIdx + 1} / ${st.frames.length}</span>${esc(f ? `${fmtDate(f.date_obs)} · ${fmtWl(f)}` : "")}`;
       $("timeOut").textContent = `${st.timeIdx + 1} of ${st.frames.length}`;
       if (+$("timeSlider").value !== st.timeIdx) $("timeSlider").value = st.timeIdx;
+    } else if (st.mode === "swipe") {
+      need.push(A, B);
+      if (A && B && A.z && B.z) paintSwipe(frameCanvas(A, 1), frameCanvas(B, scaleFor(B, A)), A, B); else blank(0);
+      cap0 = `<span class="tag a">A</span>${esc(label(A))}<span class="capgap"></span><span class="tag b">B</span>${esc(label(B))}`;
     } else {
       const f = st.phase ? B : A; need.push(A, B);
-      if (f && f.z) paint(0, frameCanvas(f, st.phase ? scaleFor(B, A) : 1)); else blank(0);
+      if (f && f.z) paint(0, frameCanvas(f, st.phase ? scaleFor(B, A) : 1), f); else blank(0);
       cap0 = `<span class="tag ${st.phase ? "b" : "a"}">${st.phase ? "B" : "A"}</span>${esc(label(f))}`;
     }
     $("cap0").innerHTML = cap0; $("cap1").innerHTML = cap1;
@@ -324,6 +349,13 @@
     if (st.hover && st.hover.pane !== pane && st.mode === "side") {
       s += `<circle cx="${st.hover.i}" cy="${st.hover.j}" r="${3.5 * u}" fill="none" stroke="#ffe36e" stroke-width="${sw * 1.3}"/>`;
     }
+    if (st.mode === "swipe" && pane === 0) {
+      const x = st.split * n;
+      s += `<line x1="${x}" y1="0" x2="${x}" y2="${n}" stroke="#fff" stroke-width="${sw * 1.6}"/>` +
+        `<circle cx="${x}" cy="${n / 2}" r="${5.5 * u}" fill="#fff" stroke="#000" stroke-opacity=".5" stroke-width="${sw}"/>` +
+        `<path d="M${x - 1.2 * u} ${n / 2 - 2.2 * u} l${-2.4 * u} ${2.2 * u} l${2.4 * u} ${2.2 * u} M${x + 1.2 * u} ${n / 2 - 2.2 * u} l${2.4 * u} ${2.2 * u} l${-2.4 * u} ${2.2 * u}" fill="none" stroke="#111" stroke-width="${sw * 1.6}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    if (BX.hooks.overlay) s += BX.hooks.overlay(pane, f, u, n) || "";
     svg.innerHTML = s;
   }
 
@@ -426,8 +458,30 @@
     if (!A || !B) { el.textContent = ""; return; }
     if (A === B) { el.textContent = "A and B are the same picture — choose two different ones to compare."; return; }
     const dt = B.mjd - A.mjd;
-    el.textContent = `B was taken ${fmtGap(dt)} ${dt >= 0 ? "after" : "before"} A.` +
-      (Math.abs(A.wavelength_um - B.wavelength_um) > 0.12 ? " Their infrared colours differ a lot, so some stars will change brightness for that reason alone." : "");
+    el.textContent = `B was taken ${fmtGap(dt)} ${dt >= 0 ? "after" : "before"} A.`;
+    updateColourMatch(A, B);
+  }
+
+  /** How close in infrared colour (wavelength) the two pictures are, and the closest partner for A. */
+  function bestColourPartner(A) {
+    let best = null, score = Infinity;
+    for (const f of st.frames) {
+      if (f === A || Math.abs(f.mjd - A.mjd) < 10 / 1440) continue;
+      const sc = Math.abs(f.wavelength_um - A.wavelength_um) / A.wavelength_um - 6e-5 * Math.abs(f.mjd - A.mjd) + nearEdge(f);
+      if (sc < score) { score = sc; best = f; }
+    }
+    return best;
+  }
+  function updateColourMatch(A, B) {
+    const el = $("colourMatch"); if (!el) return;
+    if (!A || !B || A === B || !A.wavelength_um || !B.wavelength_um) { el.hidden = true; return; }
+    const rel = Math.abs(A.wavelength_um - B.wavelength_um) / A.wavelength_um, ok = rel < 0.03, best = bestColourPartner(A);
+    const better = best && best !== B && Math.abs(best.wavelength_um - A.wavelength_um) / A.wavelength_um < rel * 0.6;
+    el.hidden = false; el.className = "colour-match " + (ok ? "ok" : "warn");
+    el.querySelector(".cm-text").textContent = ok
+      ? `Same infrared colour: A ${A.wavelength_um.toFixed(2)} µm, B ${B.wavelength_um.toFixed(2)} µm.`
+      : `Different infrared colours: A ${A.wavelength_um.toFixed(2)} µm, B ${B.wavelength_um.toFixed(2)} µm. Some stars will look brighter or fainter for that reason alone.`;
+    $("matchBtn").hidden = !better;
   }
 
   function factCard(f, cls, title) {
@@ -437,7 +491,8 @@
       `<dt>Colour</dt><dd>${f.wavelength_um ? f.wavelength_um.toFixed(3) + " µm" : "?"} infrared · band ${f.detector}</dd>` +
       `<dt>Exposure</dt><dd>${f.exptime ? f.exptime.toFixed(0) + " s" : "?"} · ${esc(f.collection.replace("spherex_", "SPHEREx ").toUpperCase().replace("SPHEREX", "SPHEREx"))}</dd>` +
       (f.sky !== undefined ? `<dt>Sky glow</dt><dd>${f.sky.toFixed(3)} MJy/sr <span class="muted">(removed)</span></dd>` : "") +
-      `<dt>Source</dt><dd><a href="${esc(f.irsa_url)}" target="_blank" rel="noopener" title="Full NASA/IPAC image file (about 62 MB)">${esc(f.id)} (FITS)</a></dd>` +
+      (f.irsa_url ? `<dt>Source</dt><dd><a href="${esc(f.irsa_url)}" target="_blank" rel="noopener" title="Full NASA/IPAC image file (about 62 MB)">${esc(f.id)} (FITS)</a></dd>`
+        : `<dt>Source</dt><dd>Simulated picture, not a NASA file</dd>`) +
       `</dl></div>`;
   }
   function updateFacts() {
@@ -451,7 +506,8 @@
   const HINTS = {
     blink: "Flipping between A and B. The stars stay still — watch for anything that jumps, appears or vanishes.",
     side: "Earlier picture on the left, later one on the right. Move over one to see the same spot in the other.",
-    diff: "B minus A. Orange is new or brighter in B, blue was there in A, and whatever didn't change fades to black.",
+    swipe: "Drag the white handle: the earlier picture (A) is on its left, the later one (B) on its right.",
+    diff: "B minus A. Magenta is new or brighter in B, green is gone or dimmer, and whatever didn't change fades to black.",
     time: "Every exposure of this spot in this colour band, oldest to newest.",
   };
 
@@ -535,7 +591,7 @@
     const done = st.frames.filter((f) => f.z || f.failed).length, bad = st.frames.filter((f) => f.failed).length;
     if (done < st.frames.length) setStatus(`${st.summary} Loading pictures… ${done} of ${st.frames.length}.`);
     else setStatus(`${st.summary}${bad ? ` ${bad} picture${bad > 1 ? "s" : ""} could not be loaded.` : ""}`);
-    if (done === st.frames.length) updateFacts();
+    if (done === st.frames.length) { updateFacts(); if (!st.example && st.doodleState === "idle" && BX.hooks.framesReady) BX.hooks.framesReady(); }
   }
 
   function summarise(search, frames) {
@@ -564,6 +620,8 @@
     st.target = target; st.frames = []; st.a = st.b = null; st.phase = 0; st.timeIdx = 0; st.hover = null;
     st.band = +opts.band || 2; st.size = +opts.size || 0.1; st.n = gridSize(st.size);
     st.marks = loadMarks();
+    st.doodles = []; st.align = {}; st.checked = null; st.doodleState = "idle"; st.pickedDoodle = null;
+    if (BX.hooks.reset) BX.hooks.reset();
     $("viewer").hidden = false; $("size").value = String(st.size);
     $("targetName").textContent = target.name || "Sky position";
     $("targetMeta").textContent = `${fmtSexa(target.ra, target.dec)}   (RA ${target.ra.toFixed(4)}°, Dec ${target.dec >= 0 ? "+" : ""}${target.dec.toFixed(4)}°)` +
@@ -577,6 +635,7 @@
 
   function adoptFrames(frames, opts) {
     st.frames = frames;
+    if (frames[0] && frames[0].n) st.n = frames[0].n;            // saved examples carry their own grid size
     const ids = new Set(frames.map((f) => f.id));
     let [a, b] = choosePair(frames);
     if (opts.a && ids.has(opts.a)) a = opts.a;
@@ -592,7 +651,7 @@
   async function loadLive(target, opts = {}) {
     st.example = null;
     const token = resetView(target, opts);
-    $("story").hidden = true;
+    $("story").hidden = true; $("stage").classList.remove("simulated");
     try {
       setStatus("Searching the SPHEREx archive for pictures of this spot…");
       const slow = setTimeout(() => {
@@ -643,12 +702,15 @@
     st.search = ex.search; st.totalInBand = ex.total_in_band || ex.frames.length;
     fillBandSelect(ex.search);
     st.summary = summarise(ex.search);
-    $("story").hidden = !ex.story; $("story").textContent = ex.story || "";
+    $("story").hidden = !ex.story; $("story").textContent = ex.story || ""; $("story").classList.toggle("simulated", !!ex.simulated);
+    $("stage").classList.toggle("simulated", !!ex.simulated);
     const frames = ex.frames.map((f) => decodeFrame({ ...f }));
     // an example may ask for particular display settings (e.g. no crosshair in the "spot it" game)
     applySettings({ ...DEFAULTS, known: !!ex.known_default, ...(ex.settings || {}) });
     adoptFrames(frames, { a: opts.a || ex.a, b: opts.b || ex.b, mode: opts.mode || ex.mode });
     setPlaying(true);
+    st.doodles = ex.doodles || []; st.align = ex.align || {}; st.checked = ex.checked || null; st.doodleState = "done";
+    if (BX.hooks.doodles) BX.hooks.doodles();
     setStatus(st.summary + " (Example saved from the archive, so it opens instantly.)");
     $("load0").hidden = true; $("q").value = ""; syncUrl();
   }
@@ -665,6 +727,10 @@
   /** Changing band or field size always goes to the live archive (examples hold one band and size). */
   function reload(change) {
     if (!st.target) return;
+    if (st.example && st.example.simulated) {            // a made-up field has no other bands or sizes to fetch
+      $("band").value = st.band; $("size").value = String(st.size);
+      toast("The simulated field exists only in this one view. Pick a real example or search the sky to change these."); return;
+    }
     const opts = { band: st.band, size: st.size, mode: st.mode, ...change };
     if (st.example && +opts.band === st.example.band && +opts.size === st.example.size) { loadExample(st.example.slug, { mode: st.mode }); return; }
     loadLive(st.target, opts);
@@ -766,11 +832,19 @@
     $("copyMarks").addEventListener("click", async () => { try { await navigator.clipboard.writeText(marksText()); toast("Marks copied."); } catch (_) { window.prompt("Copy your marks:", marksText()); } });
     $("clearMarks").addEventListener("click", () => { st.marks = []; saveMarks(); renderMarks(); schedule(); });
 
+    let dragging = false;
+    $("matchBtn").addEventListener("click", () => {
+      const A = byId(st.a), best = A && bestColourPartner(A);
+      if (best) { st.b = best.id; afterPairChange(); toast("B switched to the picture closest in colour to A."); }
+    });
     for (const pane of [0, 1]) {
       const el = $("pane" + pane);
       el.addEventListener("pointermove", (ev) => {
         if (!st.target || !st.frames.length) return;
-        const [x, y] = paneEvent(pane, ev), [ra, dec] = pixToSky(x - 0.5, y - 0.5), f = shown()[pane];
+        if (dragging && pane === 0 && st.mode === "swipe") { st.split = clamp(paneEvent(0, ev)[0] / st.n, 0.02, 0.98); st.hover = null; draw(); return; }
+        const [x, y] = paneEvent(pane, ev), [ra, dec] = pixToSky(x - 0.5, y - 0.5);
+        st.hover = { pane, i: x, j: y };
+        const f = shown()[pane];
         let txt = `${fmtSexa(ra, dec)}   (${ra.toFixed(4)}°, ${dec >= 0 ? "+" : ""}${dec.toFixed(4)}°)`;
         if (f && f.z && st.mode !== "diff") {
           const v = f.z[clamp(Math.floor(y), 0, st.n - 1) * st.n + clamp(Math.floor(x), 0, st.n - 1)];
@@ -780,7 +854,15 @@
         st.hover = { pane, i: x, j: y }; if (st.mode === "side") drawOverlay(1 - pane, shown()[1 - pane]);
       });
       el.addEventListener("pointerleave", () => { st.hover = null; if (st.mode === "side") schedule(); });
+      el.addEventListener("pointerdown", (ev) => {
+        if (pane !== 0 || st.mode !== "swipe" || st.marking) return;
+        dragging = true; try { el.setPointerCapture(ev.pointerId); } catch (_) { /* older browsers */ }
+        st.split = clamp(paneEvent(0, ev)[0] / st.n, 0.02, 0.98); draw();
+      });
+      el.addEventListener("pointerup", () => { dragging = false; });
+      el.addEventListener("pointercancel", () => { dragging = false; });
       el.addEventListener("click", (ev) => {
+        if (!st.marking && st.target && BX.hooks.paneClick) { const [x, y] = paneEvent(pane, ev); BX.hooks.paneClick(pane, x - 0.5, y - 0.5); return; }
         if (!st.marking || !st.target) return;
         const [x, y] = paneEvent(pane, ev), [ra, dec] = pixToSky(x - 0.5, y - 0.5), f = shown()[pane];
         st.marks.push({ ra, dec, date: f ? (f.date_obs || "").slice(0, 19) : "", frame: f ? f.id : "" });
@@ -790,12 +872,18 @@
 
     document.addEventListener("keydown", (e) => {
       if (/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(e.target.tagName) || !st.frames.length) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key.toLowerCase(), modeKey = { b: "blink", s: "swipe", d: "diff", t: "time" }[key];
       if (e.key === " ") { e.preventDefault(); setPlaying(!st.playing); }
+      else if (modeKey) { e.preventDefault(); setMode(modeKey); toast(`${modeKey === "diff" ? "Difference" : modeKey === "time" ? "Time-lapse" : modeKey[0].toUpperCase() + modeKey.slice(1)} view`, 1200); }
       else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
         e.preventDefault(); setPlaying(false);
-        if (st.mode === "time") st.timeIdx = (st.timeIdx + (e.key === "ArrowRight" ? 1 : st.frames.length - 1)) % st.frames.length;
-        else if (st.mode === "blink") st.phase ^= 1;
-        ensureLoaded([st.frames[st.timeIdx]]); draw(); updateFacts();
+        const step = e.key === "ArrowRight" ? 1 : st.frames.length - 1;
+        if (st.mode === "time") { st.timeIdx = (st.timeIdx + step) % st.frames.length; ensureLoaded([st.frames[st.timeIdx]]); draw(); updateFacts(); }
+        else {   // change the later epoch (B) to the next / previous exposure
+          const i = Math.max(0, st.frames.findIndex((f) => f.id === st.b));
+          st.b = st.frames[(i + step) % st.frames.length].id; st.phase = 1; afterPairChange();
+        }
       }
     });
     document.addEventListener("visibilitychange", restartTimer);
@@ -812,7 +900,7 @@
       const box = $("exampleList"); box.innerHTML = "";
       for (const ex of examples) {
         const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.dataset.slug = ex.slug;
-        b.innerHTML = `<strong>${esc(ex.title)}</strong><span>${esc(ex.blurb)}</span>`;
+        b.innerHTML = `<strong>${esc(ex.title)}</strong><span>${esc(ex.blurb)}</span>`; if (ex.simulated) b.classList.add("simulated");
         b.addEventListener("click", () => { loadExample(ex.slug); $("viewer").scrollIntoView({ behavior: "smooth", block: "start" }); });
         box.appendChild(b);
       }
@@ -833,5 +921,9 @@
       : "Waking up the live search server (it sleeps when nobody is using it)…";
   }
 
+  Object.assign(BX, {
+    $, esc, api, getJson, toast, setStatus, fmtDate, fmtSexa, fmtGap, fmtWl, monthYear, skyToPix, pixToSky, byId, schedule, invalidate,
+    setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API,
+  });
   boot();
 })();

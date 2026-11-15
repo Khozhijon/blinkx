@@ -11,7 +11,8 @@
     "size": 0.2,
     "mode": "blink",
     "a": "2025W50_2A_0685_1D2",
-    "b": "2025W50_2A_0712_4D2"
+    "b": "2025W50_2A_0712_4D2",
+    "object_kind": "interstellar comet"
   },
   {
     "slug": "vesta",
@@ -25,7 +26,8 @@
     "size": 0.2,
     "mode": "blink",
     "a": "2026W29_2A_0062_1D2",
-    "b": "2026W29_2A_0143_4D2"
+    "b": "2026W29_2A_0143_4D2",
+    "object_kind": "asteroid"
   },
   {
     "slug": "psyche",
@@ -42,7 +44,8 @@
     "b": "2025W37_1A_0313_4D3",
     "settings": {
       "cross": false
-    }
+    },
+    "object_kind": "asteroid"
   },
   {
     "slug": "barnards-star",
@@ -75,6 +78,21 @@
     "size": 0.2,
     "mode": "time",
     "a": "2025W50_2A_0698_3D5",
-    "b": "2025W50_2A_0712_1D5"
+    "b": "2025W50_2A_0712_1D5",
+    "object_kind": "interstellar comet"
+  },
+  {
+    "slug": "simulated-planet-x",
+    "simulated": true,
+    "kind": "simulated",
+    "title": "All five doodles (simulated)",
+    "blurb": "A made-up field with a pretend Planet X, to show every doodle shape.",
+    "story": "SIMULATED, not real data. Nobody has found a zigzag in SPHEREx pictures yet, so this made-up patch of sky shows what one would look like: a pretend planet 500 times farther from the Sun than Earth, jumping 14 arcminutes back and forth between four visits six months apart. The field also holds a pretend fast star, asteroid, comet and variable star. The doodles below were found by the same automatic search that runs on the real pictures.",
+    "name": "Simulated field (not real sky)",
+    "ra": 150.0,
+    "dec": 2.0,
+    "size": 0.4,
+    "band": 2,
+    "mode": "blink"
   }
 ]

@@ -4,6 +4,7 @@ Run locally:  uvicorn backend.main:app --reload   (or ./run.sh)
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import threading
@@ -18,7 +19,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import resolver, skybot, spherex as sx
+from . import catalogs, detect, resolver, skybot, spherex as sx
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
@@ -159,6 +160,28 @@ def api_frame_png(
     exp = _find_exposure(ra, dec, id)
     frame = _archive(sx.get_frame, exp, ra, dec, _size(size))
     return Response(sx.frame_to_png(frame, lo, hi), media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/doodles")
+def api_doodles(ra: float = RA, dec: float = DEC, size: float = 0.1, ids: str = Query(..., max_length=4000)):
+    """Change detection on a set of exposures of this field: movers, brightness changers, appear/disappear.
+
+    ``ids`` is a comma-separated list of exposure ids (as returned by /api/frames), 2 to 48 of them.
+    """
+    ra, dec, size = round(ra, 5), round(dec, 5), _size(size)
+    wanted = [i for i in ids.split(",") if i][:48]
+    if len(wanted) < 2:
+        raise HTTPException(400, "Change detection needs at least two exposures.")
+    ck = "doodles/" + f"{ra}_{dec}_{size}_" + hashlib.sha1(",".join(sorted(wanted)).encode()).hexdigest()[:16]
+    hit = sx.cache.get_json(ck, max_age=6 * 3600)
+    if hit is not None:
+        return hit
+    encoded = [_archive(sx.get_frame, _find_exposure(ra, dec, i), ra, dec, size) for i in wanted]
+    frames = detect.frames_from_encoded(encoded, sx.decode_frame)
+    res = detect.detect(frames, ra, dec, size)
+    res["checked"] = catalogs.annotate(res["doodles"], ra, dec, size)
+    sx.cache.put_json(ck, res)
+    return res
 
 
 @app.get("/api/known-objects")

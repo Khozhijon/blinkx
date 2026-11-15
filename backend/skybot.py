@@ -26,11 +26,18 @@ def _sexa(text: str, hours: bool) -> float:
     return val * 15.0 if hours else sign * val
 
 
-def cone(ra: float, dec: float, size_deg: float, mjd: float) -> list[dict]:
-    ck = f"skybot3/{ra:.4f}_{dec:.4f}_{size_deg:.3f}_{mjd:.4f}"
+def _visible(rows: list[dict], max_vmag: float | None) -> list[dict]:
+    if max_vmag is None:
+        return rows
+    return [o for o in rows if not isinstance(o["vmag"], (int, float)) or o["vmag"] <= max_vmag]
+
+
+def cone(ra: float, dec: float, size_deg: float, mjd: float, max_vmag: float | None = MAX_VMAG) -> list[dict]:
+    """Known bodies in the field. ``max_vmag=None`` returns every one, however faint."""
+    ck = f"skybot4/{ra:.4f}_{dec:.4f}_{size_deg:.3f}_{mjd:.4f}"
     hit = cache.get_json(ck, max_age=30 * 86400)
     if hit is not None:
-        return hit
+        return _visible(hit, max_vmag)
     params = {
         "-ep": f"{mjd + 2400000.5:.6f}",
         "-ra": f"{ra:.6f}",
@@ -67,9 +74,8 @@ def cone(ra: float, dec: float, size_deg: float, mjd: float) -> list[dict]:
                 )
             except (KeyError, ValueError, IndexError):
                 continue
-    # Fainter than about V = 18.5 an asteroid is invisible in a single SPHEREx exposure; a label on
-    # empty sky would only confuse.
-    out = [o for o in out if not isinstance(o["vmag"], (int, float)) or o["vmag"] <= MAX_VMAG]
     out.sort(key=lambda o: (o["vmag"] is None, o["vmag"] or 99))
     cache.put_json(ck, out)
-    return out
+    # Fainter than about V = 18.5 an asteroid is invisible in a single SPHEREx exposure; a label on
+    # empty sky would only confuse, so the default view leaves those out.
+    return _visible(out, max_vmag)

@@ -59,6 +59,7 @@ FLAG_COLD = 1 << 11
 FLAG_SOURCE = 1 << 21
 FLAG_BLOOM = 1 << 26
 FLAG_SNOWBALL = 1 << 27
+FLAG_HALO = 1 << 28  # glow around a cosmic-ray hit
 ALWAYS_BAD = FLAG_NONFUNC | FLAG_MISSING | FLAG_HOT | FLAG_COLD | FLAG_SNOWBALL
 
 BLOCK = 2880
@@ -224,6 +225,8 @@ def warm_up() -> None:
         WCS(h).all_world2pix([[10.01, 20.01]], 0, quiet=True)
         _tangent_grid(10.0, 20.0, 0.1, 16)
         client().head(S3_BASE, timeout=10.0)
+        import photutils.aperture  # noqa: F401 - used by the change detection
+        import photutils.detection  # noqa: F401
     except Exception:  # noqa: BLE001 - warming is best-effort
         pass
     WARM = True
@@ -667,7 +670,7 @@ def make_frame(exp: dict, ra: float, dec: float, size_deg: float, n: int | None 
         bloom = (flags & FLAG_BLOOM) != 0  # saturated cores of bright stars: real, just unreliable
         bad |= (flags & ALWAYS_BAD) != 0
         # Cosmic-ray hits during the exposure. Saturated star cores trip the same flags, keep those.
-        bad |= ((flags & (FLAG_TRANSIENT | FLAG_SUR_ERROR)) != 0) & ~bloom
+        bad |= ((flags & (FLAG_TRANSIENT | FLAG_SUR_ERROR | FLAG_HALO)) != 0) & ~bloom
     meta["flags_used"] = flags is not None
     meta["masked_fraction"] = round(float(bad.mean()), 4)
 
@@ -742,7 +745,7 @@ def decode_frame(meta: dict) -> np.ndarray:
 def get_frame(exp: dict, ra: float, dec: float, size_deg: float) -> dict:
     """Cached, browser-ready frame."""
     n = grid_size(size_deg)
-    ck = f"frame/{exp['id']}_{ra:.5f}_{dec:.5f}_{size_deg:.4f}_{n}"
+    ck = f"frame2/{exp['id']}_{ra:.5f}_{dec:.5f}_{size_deg:.4f}_{n}"
     hit = cache.get_json(ck)
     if hit is not None:
         return hit
