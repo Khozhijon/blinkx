@@ -388,6 +388,19 @@ def read_header(key: str, alt_keys: tuple | list = ()) -> ExposureHeader:
     )
 
 
+# --------------------------------------------------------------------------- sky coordinates
+
+_WCS_CARD = re.compile(r"^(NAXIS[12]?|WCSAXES|RADESYS|EQUINOX|CTYPE[12]|CUNIT[12]|CRVAL[12]|CRPIX[12]|CDELT[12]|CROTA[12]|PC[12]_[12]|CD[12]_[12]"
+                       r"|PV[12]_\d+|LONPOLE|LATPOLE|[AB]P?_ORDER|[AB]P?_DMAX|[AB]P?_\d_\d)$")
+
+
+def sky_wcs(header: fits.Header) -> WCS:
+    """The picture's sky coordinate system (TAN-SIP). astropy checks every card it is handed, and a SPHEREx
+    header has some 280 of which about 60 define the coordinates: handing over only those gives exactly the
+    same positions five times faster (checked on 72 headers of all six detectors: difference 0)."""
+    return WCS(fits.Header([c for c in header.cards if _WCS_CARD.match(c.keyword)]))
+
+
 # --------------------------------------------------------------------------- wavelength
 
 _wave_tables: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
@@ -483,11 +496,11 @@ def wavelength_at(header: fits.Header, table, x0: float, y0: float) -> tuple[flo
 # --------------------------------------------------------------------------- per-exposure metadata
 
 
-def read_exposure_meta(exp: dict, ra: float, dec: float) -> dict:
+def read_exposure_meta(exp: dict, ra: float, dec: float, eh: ExposureHeader | None = None, wcs: WCS | None = None) -> dict:
     """Header-derived facts about one exposure at the target position (no pixels downloaded)."""
-    eh = read_header(exp["key"], exp.get("alt_keys") or ())
+    eh = eh or read_header(exp["key"], exp.get("alt_keys") or ())
     h = eh.header
-    wcs = WCS(h)
+    wcs = wcs or sky_wcs(h)
     x, y = (float(v) for v in wcs.all_world2pix([[ra, dec]], 0, quiet=True)[0])
     on_detector = -0.5 <= x <= eh.nx - 0.5 and -0.5 <= y <= eh.ny - 0.5
     wl = bw = None
@@ -671,12 +684,12 @@ def make_frame(exp: dict, ra: float, dec: float, size_deg: float, n: int | None 
     n = n or grid_size(size_deg)
     eh = read_header(exp["key"], exp.get("alt_keys") or ())
     h = eh.header
-    wcs = WCS(h)
+    wcs = sky_wcs(h)
     gra, gdec = _tangent_grid(ra, dec, size_deg, n)
     px, py = wcs.all_world2pix(gra.ravel(), gdec.ravel(), 0, quiet=True)
     px, py = px.reshape(n, n), py.reshape(n, n)
     inside = (px >= -0.5) & (px <= eh.nx - 0.5) & (py >= -0.5) & (py <= eh.ny - 0.5)
-    meta = read_exposure_meta(exp, ra, dec)
+    meta = read_exposure_meta(exp, ra, dec, eh, wcs)
     meta.update({"n": n, "size_deg": size_deg, "pixscale_arcsec": round(size_deg * 3600 / n, 4)})
     if not inside.any():
         meta["coverage"] = 0.0

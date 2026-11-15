@@ -14,6 +14,8 @@ infrared survey, in a browser, on a phone.
 - **Live demo:** <https://khozhijon.github.io/blinkx/> (the saved examples open instantly; live search
   of the whole archive runs on a small free server, <https://blinkx-khofra.onrender.com>, that needs about
   a minute to wake up when nobody has used it for a while)
+- **Seven slides:** <https://khozhijon.github.io/blinkx/slides/> (also as
+  [PDF](https://khozhijon.github.io/blinkx/slides/blinkx-slides.pdf))
 - **AI use:** the code, tests and documents in this repository were written with an AI coding
   assistant (Claude, by Anthropic); commits made that way carry `Co-Authored-By: Claude`. No image,
   date or measurement is AI-generated. Details: `submission/AI_USE.md`.
@@ -356,7 +358,8 @@ scripts/     build_examples.py, build_seed.py, build_pointing_index.py (reads ev
 seed/        pointings.npz (where every SPHEREx pointing looked) and saved search results for well-known targets
 spike/       the first data experiments and validation scripts
 tests/       offline unit tests
-submission/  project summary, resources list, AI-use note, video script, slide outline
+submission/  project summary, ready-to-paste project page, resources list, AI-use note, video script, slide outline
+             (the finished seven-slide deck is in frontend/slides/)
 ```
 
 ## Data and services used
