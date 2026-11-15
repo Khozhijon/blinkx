@@ -915,7 +915,7 @@
   function saveMarks() { try { localStorage.setItem(marksKey(), JSON.stringify(st.marks)); } catch (_) { /* private mode */ } }
   function renderMarks() {
     $("marks").hidden = !st.marks.length && !st.marking;
-    $("markList").innerHTML = st.marks.map((m) => `<li>${esc(fmtSexa(m.ra, m.dec))} <span class="muted">— in the picture of ${esc(fmtDate(m.date))}</span></li>`).join("");
+    $("markList").innerHTML = st.marks.map((m, k) => `<li>${esc(fmtSexa(m.ra, m.dec))} <span class="muted">— in the picture of ${esc(fmtDate(m.date))}</span> <button type="button" class="linklike" data-spec="${k}">spectrum</button></li>`).join("");
   }
   function marksText() {
     const head = `Blink X marks near ${st.target.name || ""} (RA ${st.target.ra.toFixed(5)}, Dec ${st.target.dec.toFixed(5)})`;
@@ -933,7 +933,8 @@
     saveMarks(); renderMarks(); schedule();
   }
 
-  function shareUrl() {
+  const EMBED = document.documentElement.classList.contains("embed");   // ?embed=1: only the instrument, inside someone else's page
+  function shareUrl(embed = false) {
     const p = new URLSearchParams();
     if (st.example && st.size === st.example.size && st.band === st.example.band) p.set("ex", st.example.slug);
     else if (st.target) {
@@ -942,11 +943,20 @@
       p.set("band", st.band); p.set("size", st.size);
     }
     if (st.target) { p.set("mode", st.mode); if (st.depth !== "single") p.set("depth", st.depth); if (st.a) p.set("a", st.a); if (st.b) p.set("b", st.b); }
+    if (embed) p.set("embed", "1");
     const qs = p.toString();
     return location.origin + location.pathname + (qs ? "?" + qs : "");
   }
+  /** An iframe that shows the present view (place, band, field, mode) inside another web page. */
+  function embedCode() {
+    const what = st.target && st.target.name ? `SPHEREx pictures of ${st.target.name}` : "SPHEREx pictures of one patch of sky";
+    return `<iframe src="${shareUrl(true)}" title="Blink X: ${esc(what)}" width="100%" height="860" style="border:0;max-width:1100px" loading="lazy"></iframe>`;
+  }
   let urlTimer = null;
-  function syncUrl() { clearTimeout(urlTimer); urlTimer = setTimeout(() => { try { history.replaceState(null, "", shareUrl()); } catch (_) { /* file:// */ } }, 250); }
+  function syncUrl() {
+    clearTimeout(urlTimer);
+    urlTimer = setTimeout(() => { try { history.replaceState(null, "", shareUrl(EMBED)); } catch (_) { /* file:// */ } $("embedBar").href = shareUrl(false); }, 250);
+  }
 
   /** Download what is on screen as a PNG, with a caption strip saying what, when and from where. */
   function savePicture() {
@@ -1015,6 +1025,8 @@
     });
     $("copyMarks").addEventListener("click", async () => { try { await navigator.clipboard.writeText(marksText()); toast("Marks copied."); } catch (_) { window.prompt("Copy your marks:", marksText()); } });
     $("clearMarks").addEventListener("click", () => { st.marks = []; saveMarks(); renderMarks(); schedule(); });
+    $("markList").addEventListener("click", (e) => { const b = e.target.closest("[data-spec]"), m = b && st.marks[+b.dataset.spec]; if (m && BX.openSpectrum) BX.openSpectrum(m.ra, m.dec, `Mark ${+b.dataset.spec + 1}`); });
+    $("specBtn").addEventListener("click", () => { if (st.target && BX.openSpectrum) BX.openSpectrum(st.target.ra, st.target.dec, st.target.name || "The centre of the picture"); });
 
     let dragging = false;
     $("matchBtn").addEventListener("click", () => {
@@ -1111,7 +1123,7 @@
 
   Object.assign(BX, {
     $, esc, api, getJson, toast, setStatus, fmtDate, fmtSexa, fmtGap, fmtWl, monthYear, skyToPix, pixToSky, byId, schedule, invalidate,
-    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive, setDepth, when, addMark, knownFirst, reload,
+    unit, setMode, setPlaying, afterPairChange, shareUrl, visitsOf, ensureLoaded, frameCanvas, scaleFor, shown, draw, API, loadExample, loadLive, setDepth, when, addMark, knownFirst, reload, embedCode,
   });
   boot();
 })();

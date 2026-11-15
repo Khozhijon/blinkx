@@ -125,5 +125,6 @@ $("huntHere").addEventListener("click", () => {
   go("viewer");
 });
 
-// the page itself (and the saved example) come first; the sky map loads right after
-if (document.readyState === "complete") start(); else window.addEventListener("load", () => setTimeout(start, 50));
+// the page itself (and the saved example) come first; the sky map loads right after (not at all when embedded: the landing is hidden)
+if (document.documentElement.classList.contains("embed")) { /* no sky map inside an iframe */ }
+else if (document.readyState === "complete") start(); else window.addEventListener("load", () => setTimeout(start, 50));

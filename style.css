@@ -388,6 +388,9 @@ body.sci .sci-only { display: block !important; } body.sci .sci-inline { display
 .spectrum .mark { stroke: var(--ir); stroke-width: 1; stroke-dasharray: 2 3; } .spectrum .mark-t { fill: var(--ir); }
 .spectrum .line { stroke: var(--bone-3); stroke-width: 1; fill: none; } .spectrum .pt { fill: var(--c, var(--bone)); }
 .spectrum .line.strong { stroke: var(--bone); stroke-width: 1.4; } .spectrum .err { stroke: var(--bone-2); stroke-width: 1; } .spectrum .bin { fill: var(--void); stroke: var(--bone); stroke-width: 1.4; } .spectrum .pt.dim { opacity: .55; }
+#cardBody.spot { grid-template-columns: minmax(0, 1fr); } #cardBody.spot > * { grid-column: 1; } .asis { text-transform: none; }
+.card-head.spot-head { grid-template-columns: 1fr; --c: var(--ir); } .card-head.spot-head > div:last-child { padding-top: var(--s6); } .fullspec .spinner.small { display: inline-block; }
+.fullspec .pt.other { fill: none; stroke: var(--bone-3); stroke-width: 1; } .fullspec .band-on { fill: var(--bone); } .fullspec .actions { padding: 6px 0 2px; display: flex; }
 .lightcurve .lc-n { fill: var(--bone-2); } .lightcurve .line.strong { stroke: var(--c, var(--bone)); stroke-width: 2; }
 .spectrum .loc { stroke: var(--rule-2); stroke-width: 1; } .spectrum .loc-on { stroke: var(--bone); stroke-width: 3; }
 .spectrum .spec-hint { font-size: 14.5px; line-height: 1.5; margin-top: 12px; }
@@ -402,6 +405,16 @@ body.sci .sci-only { display: block !important; } body.sci .sci-inline { display
 .sci-table th { color: var(--bone-3); font-weight: 500; }
 .sci-table p { font-size: 11.5px; margin-top: 8px; }
 .object-card .actions { padding-top: var(--s2); padding-bottom: var(--s6); }
+
+/* ------------------------------------------------------------------ embed mode (?embed=1): only the instrument, for iframes on other sites */
+.embed-bar { display: none; }
+.embed .embed-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 16px; padding: 10px var(--gutter); border-bottom: 1px solid var(--rule); background: var(--void);
+  font: 500 10.5px/1.4 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--bone-2); text-decoration: none; }
+.embed .embed-bar b { color: var(--bone); font-weight: 500; letter-spacing: .3em; } .embed .embed-bar:hover span:last-child { color: var(--ir); }
+.embed .mast, .embed #landing, .embed #targets, .embed #explain, .embed .foot, .embed #viewer > .sec-head { display: none !important; }
+.embed #viewer { padding-top: var(--s5); }
+.embed .stage { max-width: min(100%, 92svh); }  /* the picture fits the height of the frame it sits in */
+html.embed { scroll-padding-top: 12px; }
 
 /* ------------------------------------------------------------------ small screens: designed, not squeezed */
 @media (max-width: 980px) {
