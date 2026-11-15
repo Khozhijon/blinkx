@@ -201,6 +201,42 @@
 
   /* ------------------------------------------------------------------ Object Card */
   const fmtNum = (v, n = 1) => v == null ? "?" : Number(v).toFixed(n);
+  /* ------------------------------------------------------------------ spectrum: brightness at each wavelength */
+  // where well-known gases glow (µm); drawn as marks when they fall inside the plotted range
+  const SPEC_MARKS = [[1.083, "He"], [1.282, "H"], [1.875, "H"], [2.166, "H"], [2.66, "H₂O"], [3.29, "PAH"], [4.05, "H"], [4.26, "CO₂"], [4.67, "CO"]];
+  const niceCeil = (v) => { const p = Math.pow(10, Math.floor(Math.log10(v))), m = v / p; return [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find((q) => m <= q) * p; };
+  function spectrumBlock(d, color) {
+    const sp = d.spectrum; if (!sp || !sp.points || sp.points.length < 2) return "";
+    const pts = sp.points, narrow = window.innerWidth < 720, W = narrow ? 340 : 560, H = narrow ? 204 : 214, L = 46, R = 12, T0 = 24, B = 52;
+    let w0 = pts[0].wl, w1 = pts[pts.length - 1].wl; const pad = Math.max(0.012, (w1 - w0) * 0.06); w0 -= pad; w1 += pad;
+    const big = Math.max(...pts.map((q) => q.mjy)), inJy = big >= 1000, k = inJy ? 0.001 : 1, top = niceCeil(big * k * 1.05), unit = inJy ? "Jy" : "mJy";
+    const X = (w) => L + (w - w0) / (w1 - w0) * (W - L - R), Y = (v) => T0 + (1 - v / top) * (H - T0 - B), f1 = (v) => v.toFixed(1);
+    const yv = (v) => (v >= 100 ? v.toFixed(0) : v >= 10 ? String(+v.toFixed(1)) : String(+v.toPrecision(2)));
+    let g = "";
+    for (const v of [0, top / 2, top]) g += `<line class="${v ? "grid" : "ax"}" x1="${L}" x2="${W - R}" y1="${f1(Y(v))}" y2="${f1(Y(v))}"/><text x="${L - 6}" y="${f1(Y(v) + 3.5)}" text-anchor="end">${yv(v)}</text>`;
+    g += `<line class="ax" x1="${L}" x2="${L}" y1="${T0}" y2="${H - B}"/><text x="${L - 6}" y="${T0 - 11}" text-anchor="end">${unit}</text>`;
+    const step = [0.02, 0.05, 0.1, 0.2, 0.5, 1].find((q) => (w1 - w0) / q <= (narrow ? 5 : 7)) || 1;
+    for (let w = Math.ceil(w0 / step) * step; w <= w1 + 1e-9; w += step) g += `<line class="ax" x1="${f1(X(w))}" x2="${f1(X(w))}" y1="${H - B}" y2="${H - B + 4}"/><text x="${f1(X(w))}" y="${H - B + 16}" text-anchor="middle">${w.toFixed(step < 0.1 ? 2 : 1)}</text>`;
+    g += `<text x="${L - 6}" y="${H - B + 16}" text-anchor="end">µm</text>`;
+    for (const [w, name] of SPEC_MARKS) if (w > w0 && w < w1) g += `<line class="mark" x1="${f1(X(w))}" x2="${f1(X(w))}" y1="${T0}" y2="${H - B}"/><text class="mark-t" x="${f1(X(w) + 4)}" y="${T0 + 9}">${name} ${w}</text>`;
+    // one value per wavelength for the line; every single exposure as a dot
+    const bins = []; for (const q of pts) { const last = bins[bins.length - 1]; if (last && q.wl - last.w[last.w.length - 1] < 0.006) { last.w.push(q.wl); last.f.push(q.mjy); } else bins.push({ w: [q.wl], f: [q.mjy] }); }
+    const med = (a) => { const b = a.slice().sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+    g += `<polyline class="line" points="${bins.map((b) => `${f1(X(med(b.w)))},${f1(Y(med(b.f) * k))}`).join(" ")}"/>`;
+    for (const q of pts) g += `<circle class="pt" cx="${f1(X(q.wl))}" cy="${f1(Y(q.mjy * k))}" r="${narrow ? 2.6 : 3}"><title>${q.wl.toFixed(3)} µm · ${yv(q.mjy * k)} ${unit}</title></circle>`;
+    // where this slice sits in everything SPHEREx measures (0.75 to 5.0 µm)
+    const LX = (w) => L + (w - 0.75) / 4.25 * (W - L - R), ly = H - 9;
+    g += `<line class="loc" x1="${L}" x2="${W - R}" y1="${ly}" y2="${ly}"/><line class="loc-on" x1="${f1(LX(Math.max(0.75, pts[0].wl)))}" x2="${f1(Math.max(LX(Math.min(5, pts[pts.length - 1].wl)), LX(Math.max(0.75, pts[0].wl)) + 3))}" y1="${ly}" y2="${ly}"/>` +
+      `<text x="${L - 6}" y="${ly + 3.5}" text-anchor="end">0.75</text><text x="${L}" y="${ly - 7}">${narrow ? "this slice of SPHEREx's 0.75 – 5.0 µm" : "this slice, out of all 102 SPHEREx colours (0.75 – 5.0 µm)"}</text>`;
+    const rows = pts.map((q) => `<tr><td>${q.wl.toFixed(3)}</td><td>${q.mjy}</td><td>${esc(q.frame)}</td></tr>`).join("");
+    return { html: `<section class="spectrum" style="--c:${color}"><h3>Spectrum · brightness at each wavelength</h3>` +
+      `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Brightness of this object at ${pts.length} wavelengths between ${pts[0].wl.toFixed(2)} and ${pts[pts.length - 1].wl.toFixed(2)} micrometres">${g}</svg>` +
+      `<p class="spec-hint">${esc(sp.hint || "")}</p>` +
+      `<p class="muted">${d.simulated ? "Simulated object: these brightness values are made up. " : ""}Every SPHEREx exposure sees a spot of sky in one infrared colour, so each dot is one exposure. ` +
+      `Brightness is in ${inJy ? "janskys" : "millijanskys"}, the unit astronomers use, measured in a small circle (${sp.aperture_arcsec}″ radius) and approximate: very bright objects overload the detector and read too low.</p></section>`,
+      table: `<div class="scroll"><table><thead><tr><th>λ µm</th><th>flux mJy (approx.)</th><th>exposure</th></tr></thead><tbody>${rows}</tbody></table></div>` };
+  }
+
   function openCard(id) {
     const d = st.doodles.find((x) => x.id === id); if (!d) return;
     st.pickedDoodle = id;
@@ -217,13 +253,14 @@
     rows.push(["How sure", `${Math.round((d.confidence || 0) * 100)}% <span class="muted">(a rule-of-thumb score from how often and how clearly it was seen)</span>`]);
     rows.push(["Checked in", esc((d.checked || []).join(", ") || "no catalogue could be reached")]);
     const sci = d.points.map((p) => `<tr><td>${esc((p.date || "").replace("T", " "))}</td><td>${p.ra.toFixed(5)}</td><td>${p.dec >= 0 ? "+" : ""}${p.dec.toFixed(5)}</td><td>${p.x.toFixed(1)}, ${p.y.toFixed(1)}</td><td>${p.wavelength_um ? p.wavelength_um.toFixed(3) : ""}</td><td>${p.peak_sigma}</td><td>${p.n}</td></tr>`).join("");
+    const spec = spectrumBlock(d, T.color) || { html: "", table: "" };
     $("cardBody").innerHTML =
       `<header class="card-head" style="--c:${T.color}"><div class="big">${glyph(d, 96)}</div><div><p class="kind">${esc(T.label)} · ${esc(T.what)}</p>` +
       `<h2>${esc(d.id)} <span>“${esc(d.nickname)}”</span></h2>${statusChip(d)}</div></header>` +
       `<p class="explain-text">${esc(d.explain || "")}</p>` +
-      `<dl class="card-facts">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` +
+      `<dl class="card-facts">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` + spec.html +
       (d.status !== "known" ? `<p class="disclaimer">This is a candidate, not a discovery. Image flaws, reflections of bright stars and objects that shine in only one infrared colour can all look like this.</p>` : "") +
-      `<details class="sci-table"><summary>Numbers for scientists</summary><div class="scroll"><table><thead><tr><th>UTC (mid-group)</th><th>RA °</th><th>Dec °</th><th>x, y (grid px)</th><th>λ µm</th><th>peak / noise</th><th>exposures</th></tr></thead><tbody>${sci}</tbody></table></div>` +
+      `<details class="sci-table"><summary>Numbers for scientists</summary><div class="scroll"><table><thead><tr><th>UTC (mid-group)</th><th>RA °</th><th>Dec °</th><th>x, y (grid px)</th><th>λ µm</th><th>peak / noise</th><th>exposures</th></tr></thead><tbody>${sci}</tbody></table></div>${spec.table}` +
       `<p class="muted">Field centre RA ${d.field.ra}°, Dec ${d.field.dec}°, ${d.field.size_deg}° wide, ${d.field.pixscale_arcsec}″ per grid pixel (a SPHEREx detector pixel is 6.15″).` +
       (d.known && d.known.sep_arcsec != null ? ` Catalogue position differs by ${d.known.sep_arcsec}″.` : "") + (m.fit_rms_arcsec != null ? ` Straight-line fit scatter ${m.fit_rms_arcsec}″.` : "") + `</p></details>` +
       `<div class="actions"><button class="btn primary" type="button" id="cardBlink">${d.sightings > 1 ? "Blink first vs last sighting" : "Show the picture it is in"}</button>` +
