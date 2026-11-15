@@ -545,6 +545,7 @@
     const span = v.length ? `${monthYear(v[0].start)} – ${monthYear(v[v.length - 1].end)}` : "";
     let s = `SPHEREx has photographed this spot ${search.total.toLocaleString()} times in ${v.length} visit${v.length === 1 ? "" : "s"}${span ? ` (${span})` : ""}.`;
     if (v.length === 1) s += " With one visit so far, slow changes can't show yet — but asteroids still move within days.";
+    if (search.saved_on) s += ` (For speed, this list of exposures was saved on ${fmtDate(search.saved_on + "T00:00", false)}; anything SPHEREx released after that is not in it yet.)`;
     return s + missing;
   }
 
