@@ -379,6 +379,8 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
             "stars": fr.n_align,
             "method": "wcs" if fr.n_align < 4 else ("wcs+stars" if off > 0.5 * NATIVE else "wcs, checked on stars"),
             "shift_px": [round(fr.shift[0], 2), round(fr.shift[1], 2)] if off > 0.5 * NATIVE else [0, 0],
+            # how bright the stars are in this exposure relative to the others (its colour differs): used to compare pictures fairly
+            "scale": round(float(fr.scale), 4) if fr.n_align >= 4 else None,
         }
     result["stats"].update({"sources": int(np.median([len(f.x) for f in frames])), "anchors": sum(len(g) >= 0.7 * len(frames) for g in groups)})
 
@@ -406,6 +408,8 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
         c["n_outside"] = int(outside.sum())
         c["contrast"] = float(np.median(forced[outside, j]) / c["flux"]) if outside.any() and c["flux"] > 0 else float("nan")
         c["localized"] = span > 0 and (c["t1"] - c["t0"]) < 0.5 * span
+        mine = visit == visit[c["members"] and dets[c["members"][0]].f]
+        c["visit_frac"] = len(c["frames"]) / max(1, int((avail & mine).sum()))  # share of its own visit's exposures it was seen in
         # really there for a while and really gone the rest of the time
         c["orphan"] = bool(c["localized"] and c["peak"] >= 2.0 * THRESH and c["n_outside"] >= 2 and c["contrast"] < 0.35)
 
@@ -463,7 +467,9 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
 
     # ---- zigzag: time-limited sightings in 3+ visits that jump back and forth
     left = [c for c in info if c["orphan"] and not (set(c["members"]) & used)]
-    zig = _find_zigzag(left, dets, visit, pix)
+    # a distant planet is there for the whole of each visit; a source that flickers in one or two exposures is not one
+    steady = [c for c in left if len(c["frames"]) >= 3 and c["visit_frac"] >= 0.6]
+    zig = _find_zigzag(steady, dets, visit, pix)
     if zig:
         ids = [k for c in zig for k in c["members"]]
         used.update(ids)
@@ -516,6 +522,11 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
             d["confidence"] = round(min(0.95, 0.4 + 0.05 * drift["snr"]), 2)
             doodles.append(d)
 
+    # ---- slow movers too faint to stand out in single exposures: search each visit's exposures added together
+    if int(visit.max()) >= 1:
+        taken = [(q["x"], q["y"]) for d in doodles for q in d["points"]]
+        doodles += _deep_drifts(frames, visit, pix, n, ra0, dec0, size_deg, taken, to_mjy)
+
     # ---- brightness changes between visits, for sources that stay put
     static = [c for c in info if not c["orphan"] and c["frac"] >= 0.6 and len(c["frames"]) >= 4 and not (set(c["members"]) & used)]
     if result["stats"]["anchors"] < 5:
@@ -534,7 +545,7 @@ def detect(frames: list[Frame], ra0: float, dec0: float, size_deg: float) -> dic
         d["known"] = None
         d["field"] = {"ra": ra0, "dec": dec0, "size_deg": size_deg, "n": n, "pixscale_arcsec": round(pix, 3)}
         spec = [sp for q in d["points"] for sp in q.pop("spec", [])]
-        d["spectrum"] = spectrum(spec, d["type"])
+        d["spectrum"] = spectrum(spec, d["type"], faint=bool(d.get("deep")))
         explain(d)
     order = {"zigzag": 0, "tail": 1, "spark": 2, "arrow": 3, "pulse": 4}
     doodles.sort(key=lambda d: (order[d["type"]], -d.get("confidence", 0)))
@@ -646,6 +657,19 @@ def _fit_line(t, x, y):
     vy = float(((t - tm) * (y - y.mean())).sum() / den)
     res = np.hypot(x - (x.mean() + vx * (t - tm)), y - (y.mean() + vy * (t - tm)))
     return vx, vy, float(np.sqrt((res**2).mean()))
+
+
+def _fit_line_weighted(t, x, y, sigma):
+    """Straight motion through positions of unequal quality. Returns (vx, vy, weighted rms, error of the speed)."""
+    w = 1.0 / np.maximum(np.asarray(sigma, float), 1e-6) ** 2
+    tm = float((w * t).sum() / w.sum())
+    den = float((w * (t - tm) ** 2).sum()) or 1.0
+    xm, ym = float((w * x).sum() / w.sum()), float((w * y).sum() / w.sum())
+    vx = float((w * (t - tm) * (x - xm)).sum() / den)
+    vy = float((w * (t - tm) * (y - ym)).sum() / den)
+    res2 = (x - (xm + vx * (t - tm))) ** 2 + (y - (ym + vy * (t - tm))) ** 2
+    rms = float(np.sqrt((w * res2).sum() / w.sum()))
+    return vx, vy, rms, 1.0 / math.sqrt(den)
 
 
 def _motion(points: list[dict], pix: float, vx: float | None = None, vy: float | None = None) -> dict:
@@ -766,6 +790,144 @@ def _zigzag_doodle(dets, chain, sight, pix) -> dict:
     return d
 
 
+DEEP_MIN_EXPOSURES = 5  # a visit needs this many exposures for its stack to be searched on its own
+
+
+def _stack(frames: list[Frame], idx: list[int]) -> Frame:
+    """The exposures of one visit added together: the median of each pixel (so cosmic rays and fast movers
+    drop out), scaled so that the noise is 1 again. Its sources are found like those of any exposure."""
+    cube = np.array([frames[i].img for i in idx], dtype=np.float32)
+    cnt = np.isfinite(cube).sum(axis=0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        med = np.nanmedian(cube, axis=0)
+    img = np.where(cnt >= 3, med * np.sqrt(np.maximum(cnt, 1)) / 1.2533, np.nan)
+    mid = frames[idx[len(idx) // 2]]
+    gain = math.sqrt(len(idx)) / 1.2533
+    fr = Frame(mid.id, float(np.mean([frames[i].mjd for i in idx])), mid.date, float(np.mean([frames[i].wl for i in idx])), img, mid.pix,
+               float(np.median([frames[i].sigma for i in idx])) / gain)
+    find_sources(fr)
+    return fr
+
+
+def _deep_drifts(frames, visit, pix, n, ra0, dec0, size_deg, taken, to_mjy) -> list[dict]:
+    """Slow movers too faint for single exposures.
+
+    Each visit's exposures are added together; the sources of every deep picture are matched from visit
+    to visit; what is left of the misalignment is taken out with the stars themselves. A source whose
+    position then shifts by half a SPHEREx pixel or more, and by six times the scatter of the ordinary
+    stars, is reported as a slow drift. ``taken`` are places already explained by another doodle."""
+    s = NATIVE / pix
+    groups = [[i for i in range(len(frames)) if visit[i] == v] for v in sorted({int(v) for v in visit})]
+    stacks = [(g, _stack(frames, g)) for g in groups if len(g) >= 3]
+    deep = [k for k, (g, _) in enumerate(stacks) if len(g) >= DEEP_MIN_EXPOSURES]
+    if len(deep) < 2 or stacks[deep[-1]][1].mjd - stacks[deep[0]][1].mjd < 60:
+        return []
+    ref = stacks[deep[0]][1]
+    chains = []  # the same source in every deep picture
+    for i in range(len(ref.x)):
+        chain, prev, pi = [i], ref, i
+        for k in deep[1:]:
+            fr = stacks[k][1]
+            if not len(fr.x):
+                chain = None
+                break
+            j = int(np.argmin(np.hypot(fr.x - prev.x[pi], fr.y - prev.y[pi])))
+            # each must be the other's nearest neighbour: of two close stars, one must not be taken for the other
+            back = int(np.argmin(np.hypot(prev.x - fr.x[j], prev.y - fr.y[j])))
+            if back != pi or math.hypot(fr.x[j] - prev.x[pi], fr.y[j] - prev.y[pi]) > 2.5 * s or not 0.6 < fr.flux[j] / max(prev.flux[pi], 1e-9) < 1.7:
+                chain = None
+                break
+            chain.append(j)
+            prev, pi = fr, j
+        if chain:
+            chains.append(chain)
+    if len(chains) < 6:  # too few stars to tell a real shift from a misalignment
+        return []
+    X = np.array([[stacks[k][1].x[c[m]] for m, k in enumerate(deep)] for c in chains])  # [source, deep picture], grid px
+    Y = np.array([[stacks[k][1].y[c[m]] for m, k in enumerate(deep)] for c in chains])
+    off_x, off_y = np.median(X - X[:, :1], axis=0), np.median(Y - Y[:, :1], axis=0)  # what is left of the misalignment between visits
+    X, Y = X - off_x, Y - off_y
+    dx, dy = X[:, -1] - X[:, 0], Y[:, -1] - Y[:, 0]
+    disp = np.hypot(dx, dy)
+    scatter = max(1.4826 * float(np.median(np.abs(np.r_[dx, dy]))), 0.05 * s)  # how far ordinary stars seem to move, per axis
+    t_deep = np.array([stacks[k][1].mjd for k in deep])
+    out = []
+    for c, chain in enumerate(chains):
+        if disp[c] < 0.5 * s or disp[c] < 6.0 * scatter:
+            continue
+        frs = [stacks[k][1] for k in deep]
+        peaks = [float(fr.peak[j]) for fr, j in zip(frs, chain)]
+        # clear in the deep pictures, yet too faint to be followed in single exposures (those are searched above)
+        if min(peaks) < 8.0 or max(peaks) > 45.0:
+            continue
+        edge = 4.0 * s
+        if min(X[c].min(), Y[c].min()) < edge or max(X[c].max(), Y[c].max()) > n - 1 - edge:
+            continue
+        # a neighbour pulls the measured centre of a source around: a comparable one within four pixels, or a much brighter one a little farther
+        def crowded(fr, j):
+            r = np.hypot(fr.x - fr.x[j], fr.y - fr.y[j])
+            r[j] = np.inf
+            return bool(np.any((r < 4.0 * s) & (fr.peak > 0.4 * fr.peak[j])) or np.any((r < 7.0 * s) & (fr.peak > 20.0 * fr.peak[j])))
+
+        if any(crowded(fr, j) for fr, j in zip(frs, chain)):
+            continue
+        if any(math.hypot(X[c, 0] - qx, Y[c, 0] - qy) < 2.5 * s for qx, qy in taken):
+            continue
+        vx, vy, rms = _fit_line(t_deep, X[c] * pix, Y[c] * pix)  # arcsec per day
+        if len(deep) >= 3 and rms > max(0.25 * NATIVE, 0.15 * disp[c] * pix):  # three or more visits must fall on one straight line
+            continue
+        # one sighting per visit: the deep pictures as measured, shallower visits where the straight line says to look
+        tm, xm, ym = float(t_deep.mean()), float(X[c].mean()), float(Y[c].mean())
+        seen = []
+        for k, (g, fr) in enumerate(stacks):
+            if k in deep:
+                m = deep.index(k)
+                x, y, flux, peak = float(X[c, m]), float(Y[c, m]), float(fr.flux[chain[m]]), float(fr.peak[chain[m]])
+            else:
+                gx, gy = xm + vx * (fr.mjd - tm) / pix, ym + vy * (fr.mjd - tm) / pix
+                cx, cy, fl, _, _ = _photometry(fr.img, np.array([[gx, gy]]), pix)
+                yi, xi = int(round(float(cy[0]))), int(round(float(cx[0])))
+                if not (1 <= xi < n - 1 and 1 <= yi < n - 1):
+                    continue
+                peak = float(np.nanmax(fr.img[yi - 1:yi + 2, xi - 1:xi + 2]))
+                if not np.isfinite(peak) or peak < 3.0 or math.hypot(float(cx[0]) - gx, float(cy[0]) - gy) > s or fl[0] <= 0:
+                    continue
+                x, y, flux = float(cx[0]), float(cy[0]), float(fl[0]) * fr.sigma
+            seen.append((k, g, fr, x, y, flux, peak))
+        tt = np.array([q[2].mjd for q in seen])
+        # how well each visit pins the position down: the stars' own scatter, plus the noise of a faint source (about 3"/signal-to-noise)
+        sig = np.array([math.hypot(scatter * pix, 3.0 / max(q[6], 1.0)) for q in seen])
+        vx, vy, rms, v_err = _fit_line_weighted(tt, np.array([q[3] for q in seen]) * pix, np.array([q[4] for q in seen]) * pix, sig)
+        days = float(tt.max() - tt.min())
+        dist = math.hypot(vx, vy) * days
+        if dist < 0.5 * NATIVE:
+            continue
+        pts = []
+        for k, g, fr, x, y, flux, peak in seen:
+            ra, dec = pix_to_sky(x, y, ra0, dec0, size_deg, n)
+            each = [forced_flux(frames[i], np.array([x]), np.array([y]))[0] for i in g]
+            pts.append({
+                "t": fr.mjd, "date": fr.date[:19], "frame": fr.id, "frames": [frames[i].id for i in g], "x": round(x, 2), "y": round(y, 2),
+                "ra": round(float(ra), 6), "dec": round(float(dec), 6), "n": len(g), "flux": round(flux, 2), "peak_sigma": round(peak, 1),
+                "wavelength_um": round(fr.wl, 4), "visit": int(visit[g[0]]),
+                "spec": [[frames[i].wl, float(v) * to_mjy, frames[i].id] for i, v in zip(g, each) if np.isfinite(v)],
+            })
+        snr = float(disp[c] / scatter)
+        pa = math.degrees(math.atan2(-vx, -vy)) % 360.0
+        d = _base("arrow", pts)
+        d["motion"] = {
+            "dist_arcsec": round(dist, 2), "dist_spherex_px": round(dist / NATIVE, 2), "dist_grid_px": round(dist / pix, 2), "pa_deg": round(pa, 1),
+            "direction": compass(pa), "days": round(days, 2), "rate_arcsec_per_year": round(dist / days * 365.25, 3),
+            "rate_arcsec_per_hour": round(dist / days / 24.0, 6), "fit_rms_arcsec": round(rms, 2), "snr": round(snr, 1),
+            "rate_err_arcsec_per_year": round(max(v_err, rms / max(days, 1.0)) * 365.25, 2),
+        }
+        d["confidence"] = round(min(0.9, 0.35 + 0.03 * snr), 2)
+        d["deep"] = {"visits": len(pts), "exposures": sum(len(q[1]) for q in seen), "star_scatter_arcsec": round(scatter * pix, 2)}
+        out.append(d)
+    return out
+
+
 def _drift(dets, ids, pix):
     """Slow, steady motion of a source that is otherwise always there (proper motion)."""
     t = np.array([dets[k].t for k in ids])
@@ -785,6 +947,7 @@ def _drift(dets, ids, pix):
         "dist_arcsec": round(dist, 2), "dist_spherex_px": round(dist / NATIVE, 2), "dist_grid_px": round(dist / pix, 2), "pa_deg": round(pa, 1),
         "direction": compass(pa), "days": round(days, 2), "rate_arcsec_per_year": round(dist / days * 365.25, 3),
         "rate_arcsec_per_hour": round(dist / days / 24.0, 6), "fit_rms_arcsec": round(rms, 2), "snr": round(snr, 1),
+        "rate_err_arcsec_per_year": round(err / days * 365.25, 2),
     }
 
 
@@ -818,7 +981,12 @@ def _variability(dets, ids, frames, visit):
         return None
     mid = float(np.median(levels))
     change = "brightened" if levels[hi] / mid - 1.0 >= 1.0 - levels[lo] / mid else "dimmed"
-    return {"change": change, "change_pct": round((amp - 1) * 100.0, 0), "levels": [round(v, 3) for v in levels], "snr": round(snr, 1)}
+    t = np.array([dets[k].t for k in ids])
+    order = np.argsort(t)
+    return {"change": change, "change_pct": round((amp - 1) * 100.0, 0), "levels": [round(v, 3) for v in levels], "snr": round(snr, 1),
+            # every exposure: time (MJD), brightness relative to this object's own middle value after its colour trend is taken out, visit
+            "curve": [[round(float(t[i]), 4), round(float(res[i]), 3), int(vis[i])] for i in order],
+            "errors": [round(e, 3) for e in errs]}
 
 
 # --------------------------------------------------------------------------- words
@@ -839,6 +1007,32 @@ def _resolving_power(wl: float) -> float:
     return 41.0 if wl < 2.42 else 35.0 if wl < 3.82 else 110.0 if wl < 4.42 else 130.0
 
 
+def _faint_spectrum(every: list, pts: list) -> dict:
+    """An object too faint for single exposures: each measurement is mostly noise (some come out below zero), so the
+    spectrum is read from the middle value of groups of neighbouring wavelengths."""
+    out = {"unit": "mJy", "aperture_arcsec": round(1.5 * NATIVE, 1), "faint": True,
+           "points": [{"wl": round(w, 4), "mjy": float(f"{f:.4g}"), "frame": i} for w, f, i in pts]}
+    groups = np.array_split(np.arange(len(every)), min(5, len(every) // 6))
+    wl = np.array([q[0] for q in every])
+    fx = np.array([q[1] for q in every])
+    mid = np.array([float(np.median(fx[g])) for g in groups])
+    err = np.array([1.2533 * 1.4826 * float(np.median(np.abs(fx[g] - np.median(fx[g])))) / math.sqrt(len(g)) for g in groups])
+    out["binned"] = [[round(float(np.mean(wl[g])), 4), float(f"{max(m, 0.0):.4g}"), float(f"{e:.3g}")] for g, m, e in zip(groups, mid, err)]
+    per = len(every) // len(groups)
+    lead = f"It is faint: every dot is one noisy exposure, so the line joins the middle value of each {per} neighbouring measurements. "
+    blue, red, noise = float(mid[0]), float(mid[-1]), 3.0 * float(np.hypot(err[0], err[-1]))
+    span = f"From {wl[0]:.2f} to {wl[-1]:.2f} µm"
+    if blue > 0 and red > 1.3 * blue and red - blue > noise:
+        out["hint"] = lead + f"{span} it gets brighter toward longer wavelengths, about {red / blue:.1f} times. Very cool objects do that."
+    elif red > 0 and blue > 1.3 * red and blue - red > noise:
+        out["hint"] = lead + f"{span} it fades toward longer wavelengths, about {blue / red:.1f} times."
+    elif blue <= 0 < red and red > noise:
+        out["hint"] = lead + f"It only shows at the long-wavelength end, near {wl[-1]:.2f} µm. Very cool objects do that."
+    else:
+        out["hint"] = lead + f"{span} no clear change of brightness stands out of the noise."
+    return out
+
+
 def _point_scatter(pts: list) -> float:
     """Robust scatter of the single measurements around a straight line through them."""
     w, f = np.array([q[0] for q in pts]), np.array([q[1] for q in pts])
@@ -846,16 +1040,19 @@ def _point_scatter(pts: list) -> float:
     return 1.4826 * float(np.median(np.abs(r - np.median(r))))
 
 
-def spectrum(spec: list, kind: str = "") -> dict | None:
+def spectrum(spec: list, kind: str = "", faint: bool = False) -> dict | None:
     """Brightness at every wavelength the object was measured at, with a careful plain-language reading.
 
     ``spec`` is a list of [wavelength in µm, flux in mJy, exposure id]. Each SPHEREx exposure sees a
     given spot of sky at one wavelength, so the exposures of one object add up to a piece of its spectrum.
     The flux is a small-aperture sum (radius 1.5 SPHEREx pixels) without aperture correction: approximate.
     """
-    pts = sorted(([float(w), float(f), str(i)] for w, f, i in spec if w and w > 0 and f and f > 0 and math.isfinite(f)), key=lambda q: q[0])
+    every = sorted(([float(w), float(f), str(i)] for w, f, i in spec if w and w > 0 and f is not None and math.isfinite(f)), key=lambda q: q[0])
+    pts = [q for q in every if q[1] > 0]
     if not pts:
         return None
+    if faint and len(every) >= 12:
+        return _faint_spectrum(every, pts)
     out = {"unit": "mJy", "aperture_arcsec": round(1.5 * NATIVE, 1),
            "points": [{"wl": round(w, 4), "mjy": float(f"{f:.4g}"), "frame": i} for w, f, i in pts]}
     # one value per wavelength: repeat visits to the same wavelength are combined, so a change with time is not read as colour
@@ -921,7 +1118,8 @@ def explain(d: dict) -> None:
     known = d.get("known")
     who = f"This is {known['name']}, a known {known.get('kind', 'object')} ({known.get('source', 'catalogue')})." if known else ""
     if known and known.get("catalog_pm_arcsec_per_year") and m.get("rate_arcsec_per_year"):
-        who += f" The catalogue lists {known['catalog_pm_arcsec_per_year']:.2f} arcseconds a year; these images give {m['rate_arcsec_per_year']:.1f}."
+        pm = f"{m['rate_arcsec_per_year']:.1f}" + (f" ± {m['rate_err_arcsec_per_year']:.1f}" if m.get("rate_err_arcsec_per_year") else "")
+        who += f" The catalogue lists {known['catalog_pm_arcsec_per_year']:.2f} arcseconds a year; these images give {pm}."
     if kind in ("spark", "tail") and m:
         speed = m.get("rate_arcsec_per_hour", 0)
         what = "A fuzzy object with a glow around it" if kind == "tail" else "A point of light"
@@ -932,9 +1130,13 @@ def explain(d: dict) -> None:
         text = ("Something was here in one group of exposures and not in the others. It may be an asteroid or comet caught once, "
                 "an object that shines in only one infrared colour, or a flaw in the image.")
     elif kind == "arrow":
-        text = (f"This one is always there but slides steadily toward the {m['direction']}: {m['dist_arcsec']:.1f} arcseconds "
+        opening = ("Too faint to stand out in a single exposure, this one appears when each visit's exposures are added together. It slides steadily"
+                   if d.get("deep") else "This one is always there but slides steadily")
+        text = (f"{opening} toward the {m['direction']}: {m['dist_arcsec']:.1f} arcseconds "
                 f"({m['dist_spherex_px']:.1f} SPHEREx pixels) in {_span(m['days'])}, about {m['rate_arcsec_per_year']:.1f} arcseconds a year. "
-                "Steady drift like this is how a nearby star or brown dwarf looks from Earth.")
+                "Steady drift like this is how a nearby star or brown dwarf looks from Earth."
+                + (" (Something this close also wobbles with the seasons, by up to an arcsecond: over a year or so that wobble is part of the number.)"
+                   if m.get("rate_arcsec_per_year", 0) >= 2.0 and m.get("days", 0) < 900 else ""))
     elif kind == "zigzag":
         text = (f"It appears to jump about {m['jump_arcsec']:.0f} arcseconds back and forth between visits six months apart. SPHEREx looks at each "
                 "patch of sky from opposite sides of Earth's orbit, so a body far beyond Neptune would do exactly that. "

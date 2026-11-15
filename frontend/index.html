@@ -85,8 +85,13 @@
           <p id="apiState" class="api-state" hidden></p>
           <p id="status" class="status" role="status" aria-live="polite"></p>
         </div>
+        <div class="examples" id="nasaWrap">
+          <span class="label">NASA's five test objects
+            <button type="button" class="tip" aria-label="About the five test objects" data-tip="The challenge asks every team to test its tool on these five: two fast-moving stars, the coldest brown dwarf known and two stars that change brightness. Each one opens instantly from saved, real SPHEREx pictures, and you can also type any of them in the search box.">?</button></span>
+          <div id="nasaList" class="chips"></div>
+        </div>
         <div class="examples">
-          <span class="label">Targets with something moving</span>
+          <span class="label">More to watch</span>
           <div id="exampleList" class="chips"><span class="muted">Loading targets…</span></div>
         </div>
       </div>
@@ -115,8 +120,8 @@
           <label>Exposures
             <select id="depth">
               <option value="single">One at a time</option>
-              <option value="visit">Added up, each visit (deeper)</option>
-              <option value="all">All added up (deepest)</option>
+              <option value="visit">Added up per visit</option>
+              <option value="all">All added up</option>
             </select>
           </label>
         </div>
@@ -256,6 +261,8 @@
               <label><input id="smooth" type="checkbox" checked> Smooth pixels</label>
               <label><input id="cross" type="checkbox" checked> Reticle and grid</label>
               <label><input id="known" type="checkbox"> Label known asteroids &amp; comets</label>
+              <label><input id="gaia" type="checkbox"> Gaia stars, moved to this date
+                <button type="button" class="tip" aria-label="About the Gaia overlay" data-tip="Gaia is the European Space Agency's star-mapping satellite. Each ring is a star from its catalogue, moved to where Gaia's measured motion puts it on the date of the picture you are looking at. A star sitting in its ring is behaving as catalogued. Fast stars get a solid ring and a dashed line to where they will be in ten years. A dot with no ring may be a galaxy, an asteroid, or something too cool and red for Gaia to see. Point at a ring to read the star's brightness, motion and distance.">?</button></label>
               <label><input id="showFilled" type="checkbox"> Show repaired pixels</label>
             </div>
             <div class="actions">

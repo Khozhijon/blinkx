@@ -289,3 +289,18 @@ def test_coordinates_and_names_as_the_challenge_writes_them():
     assert resolver.canonical_name("Barnard’s Star") == "Barnard's star" and resolver.canonical_name("Vega’s twin") == "Vega's twin"
     assert resolver.canonical_name("WISE 0855") == "WISE J085510.83-071442.5"
     assert resolver.canonical_name("Epsilon Indi B") == "eps Ind B" and resolver.canonical_name("R Draconis") == "R Dra"
+
+
+def test_gaia_table_is_parsed():
+    from backend import gaia
+
+    body = "\n".join([
+        "#RESOURCE=yCat_1355", "#Name: I/355/gaiadr3", "", "Source\tRA_ICRS\tDE_ICRS\tGmag\tpmRA\tpmDE\tPlx",
+        " \tdeg\tdeg\tmag\tmas/yr\tmas/yr\tmas", "-------------------\t---------------\t---------------\t---------\t---------\t---------\t---------",
+        "4472832130942575872\t269.44850252544\t+04.73942005111\t 8.193974\t -801.551\t10362.394\t 546.9759",
+        "4472836292758713216\t269.44387161153\t+04.79629141602\t11.862574\t         \t         \t         ", "",
+    ])
+    rows = gaia.parse_tsv(body)
+    assert len(rows) == 2 and rows[0]["id"] == "4472832130942575872"
+    assert rows[0]["pmdec"] == pytest.approx(10362.394) and rows[0]["plx"] == pytest.approx(546.9759) and rows[0]["g"] == pytest.approx(8.193974)
+    assert rows[1]["pmra"] is None and rows[1]["plx"] is None and rows[1]["dec"] == pytest.approx(4.79629141602)

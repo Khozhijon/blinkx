@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from backend import main as api  # noqa: E402
-from backend import catalogs, detect, skybot, spherex as sx  # noqa: E402
+from backend import catalogs, detect, gaia, skybot, spherex as sx  # noqa: E402
 
 OUT = ROOT / "frontend" / "examples"
 DEFS = ROOT / "scripts" / "examples.json"
@@ -95,6 +95,8 @@ def build(ex: dict) -> dict:
     old = json.loads(path.read_text()) if path.exists() else None
     try:
         search = api.api_search(ra, dec)
+        if search.get("from_index") and old:  # IRSA is down: the list saved in the bundle is the exact one, keep it
+            raise RuntimeError("IRSA search unavailable")
         exposures = {e["id"]: e for e in sx.search_exposures(ra, dec)}
         listed = sx.list_frames(ra, dec, band)
         chosen = pick_frames(listed, ex.get("frames"))
@@ -150,6 +152,7 @@ def build(ex: dict) -> dict:
         "band": band,
         "size": size,
         "mode": ex.get("mode", "blink"),
+        "depth": ex.get("depth"),  # "visit": open with each visit's exposures added together
         "a": ex.get("a"),
         "b": ex.get("b"),
         "settings": ex.get("settings", {}),
@@ -163,6 +166,10 @@ def build(ex: dict) -> dict:
         "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "NASA/IPAC IRSA SPHEREx Level-2 spectral images (collections spherex_dr1, spherex_qr3)",
     }
+    try:  # Gaia stars of the field, so the catalogue overlay also works when the catalogue service does not
+        bundle["gaia"] = [{k: (round(v, 6) if isinstance(v, float) and k in ("ra", "dec") else v) for k, v in s.items()} for s in gaia.cone(ra, dec, size)]
+    except gaia.GaiaError as exc:
+        print(f"  (Gaia catalogue unavailable for {ex['slug']}: {exc})")
     if known:
         bundle["known"] = known
         bundle["known_default"] = bool(ex.get("known_default", False))
@@ -187,7 +194,7 @@ def main() -> None:
         if not f.exists():
             continue
         t = json.loads(f.read_text())["target"]
-        index.append({"slug": e["slug"], "title": e["title"], "blurb": e["blurb"], "kind": e.get("kind", ""), "simulated": bool(e.get("simulated")),
+        index.append({"slug": e["slug"], "title": e["title"], "blurb": e["blurb"], "kind": e.get("kind", ""), "group": e.get("group", "more"), "simulated": bool(e.get("simulated")),
                       "ra": t["ra"], "dec": t["dec"], "label": e.get("object_label") or e["title"]})
     (OUT / "index.json").write_text(json.dumps(index, indent=1))
     print("index:", [e["slug"] for e in index])

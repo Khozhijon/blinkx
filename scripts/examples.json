@@ -48,6 +48,21 @@
     "object_kind": "asteroid"
   },
   {
+    "slug": "3i-atlas-co2",
+    "candidate": "3i-atlas-co2",
+    "kind": "comet",
+    "object_label": "3I/ATLAS",
+    "title": "A comet's hidden gas",
+    "blurb": "The same comet in a colour where carbon dioxide glows.",
+    "story": "Same comet, same three hours, a different SPHEREx detector. Every exposure records a slightly different infrared colour. At most colours here 3I/ATLAS is a faint dot, but near 4.26 µm, where carbon dioxide gas glows, it swells into a huge cloud. In this example the big change is colour, not time: play the Time-lapse and watch the wavelength in the caption.",
+    "name": "Comet 3I/ATLAS at 4.0–4.3 µm, 14 Dec 2025",
+    "size": 0.2,
+    "mode": "time",
+    "a": "2025W50_2A_0698_3D5",
+    "b": "2025W50_2A_0712_1D5",
+    "object_kind": "interstellar comet"
+  },
+  {
     "slug": "barnards-star",
     "kind": "star",
     "title": "Barnard's Star",
@@ -64,22 +79,77 @@
       "tol": 0.085
     },
     "a": "2025W35_1A_0146_1D2",
-    "b": "2026W39_1A_0371_1D2"
+    "b": "2026W39_1A_0371_1D2",
+    "group": "nasa"
   },
   {
-    "slug": "3i-atlas-co2",
-    "candidate": "3i-atlas-co2",
-    "kind": "comet",
-    "object_label": "3I/ATLAS",
-    "title": "A comet's hidden gas",
-    "blurb": "The same comet in a colour where carbon dioxide glows.",
-    "story": "Same comet, same three hours, a different SPHEREx detector. Every exposure records a slightly different infrared colour. At most colours here 3I/ATLAS is a faint dot, but near 4.26 µm, where carbon dioxide gas glows, it swells into a huge cloud. In this example the big change is colour, not time: play the Time-lapse and watch the wavelength in the caption.",
-    "name": "Comet 3I/ATLAS at 4.0–4.3 µm, 14 Dec 2025",
-    "size": 0.2,
-    "mode": "time",
-    "a": "2025W50_2A_0698_3D5",
-    "b": "2025W50_2A_0712_1D5",
-    "object_kind": "interstellar comet"
+    "slug": "eps-indi-b",
+    "group": "nasa",
+    "kind": "star",
+    "title": "Epsilon Indi B",
+    "blurb": "Two brown dwarfs 12 light-years away, sliding 4.7″ a year.",
+    "story": "Epsilon Indi B is a pair of brown dwarfs — too small to shine like stars — circling the star Epsilon Indi, only 12 light-years from us. Because they are so close, they slide across the sky by about 4.7 arcseconds every year. Blink the first and the last visit: the dot in the middle steps toward the south-east while the stars around it stay put.",
+    "name": "Epsilon Indi B",
+    "ra": 331.09705,
+    "dec": -56.8008,
+    "size": 0.1,
+    "band": 2,
+    "mode": "blink",
+    "frames": {
+      "max": 40
+    }
+  },
+  {
+    "slug": "wise-0855",
+    "group": "nasa",
+    "kind": "star",
+    "title": "WISE 0855",
+    "blurb": "The coldest brown dwarf known. Too faint for one exposure — until they are added up.",
+    "story": "WISE 0855 is the coldest brown dwarf known: colder than ice, and only about 7 light-years away. In a single two-minute SPHEREx exposure it barely rises out of the noise. Here every visit's exposures are added together, and a faint dot appears in the cross-hair. Blink the visits: it steps toward the west, about 8 arcseconds a year. Blink X found it by itself this way.",
+    "name": "WISE 0855−0714",
+    "ra": 133.75931,
+    "dec": -7.24215,
+    "size": 0.1,
+    "band": 6,
+    "mode": "blink",
+    "depth": "visit",
+    "frames": "all"
+  },
+  {
+    "slug": "rw-aurigae",
+    "group": "nasa",
+    "kind": "star",
+    "title": "RW Aurigae",
+    "blurb": "A young star with unsteady light: about 60% brighter a year later.",
+    "story": "RW Aurigae is a young star still pulling in gas from the disc around it, and its light is famously unsteady. Between September 2025 and September 2026 SPHEREx saw it grow about 60% brighter at these wavelengths, while the stars around it stayed the same. Blink the first and last visit, then open its doodle to see the brightness at each visit.",
+    "name": "RW Aurigae",
+    "ra": 76.95653,
+    "dec": 30.40144,
+    "size": 0.1,
+    "band": 1,
+    "mode": "blink",
+    "frames": {
+      "max": 40
+    }
+  },
+  {
+    "slug": "r-draconis",
+    "group": "nasa",
+    "kind": "star",
+    "title": "R Draconis",
+    "blurb": "A pulsing red giant, so bright it overloads the detector.",
+    "story": "R Draconis is a red giant that swells and shrinks every 245 days, and its brightness rises and falls with it. It is one of the brightest infrared stars in this part of the sky: so bright that it overloads SPHEREx's detector, which is why its middle looks blocky and long spikes run out of it. Blink X measured it against the stars around it and found changes of 10–20% between visits — too small, on an overloaded star, for it to call. No doodle here is the honest answer.",
+    "name": "R Draconis",
+    "ra": 248.16761,
+    "dec": 66.75498,
+    "size": 0.1,
+    "band": 2,
+    "mode": "blink",
+    "frames": {
+      "near_um": 1.27,
+      "tol": 0.1,
+      "max": 16
+    }
   },
   {
     "slug": "simulated-planet-x",

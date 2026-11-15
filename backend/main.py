@@ -19,7 +19,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import catalogs, detect, pointings, resolver, skybot, spherex as sx
+from . import catalogs, detect, gaia, pointings, resolver, skybot, spherex as sx
 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = ROOT / "frontend"
@@ -186,6 +186,17 @@ def api_doodles(ra: float = RA, dec: float = DEC, size: float = 0.1, ids: str = 
     res["checked"] = catalogs.annotate(res["doodles"], ra, dec, size)
     sx.cache.put_json(ck, res)
     return res
+
+
+@app.get("/api/gaia")
+def api_gaia(ra: float = RA, dec: float = DEC, size: float = 0.1):
+    """Gaia DR3 stars in the field (ESA's Gaia mission) with their proper motions, for the catalogue overlay."""
+    ra, dec, size = round(ra, 5), round(dec, 5), _size(size)
+    try:
+        stars = gaia.cone(ra, dec, size)
+    except gaia.GaiaError as exc:
+        raise HTTPException(502, f"The Gaia catalogue service is not answering right now. (Detail: {str(exc)[:140]})") from exc
+    return {"catalog": "Gaia DR3 (ESA), read from VizieR", "epoch": gaia.EPOCH, "epoch_mjd": gaia.EPOCH_MJD, "limit_gmag": gaia.MAX_GMAG, "ra": ra, "dec": dec, "size": size, "stars": stars}
 
 
 @app.get("/api/known-objects")

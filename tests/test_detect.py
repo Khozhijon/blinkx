@@ -1,6 +1,7 @@
 """Change detection on a simulated field where the right answer is known (no network)."""
 import math
 
+import numpy as np
 import pytest
 
 from backend import detect, simulate, spherex as sx
@@ -123,3 +124,37 @@ def test_spectrum_reads_a_gas_line_but_not_a_change_with_time():
     assert "peak_um" not in sp and "changes with time" in sp["hint"]
     # too few wavelengths: no reading at all
     assert "too few" in detect.spectrum([[1.45, 5.0, "a"], [1.47, 5.1, "b"]], "spark")["hint"]
+
+
+def _made_up_visits(mover_peak: float, shift_px: float, seed: int = 5):
+    """Two visits of 12 exposures of a made-up star field with one faint source that moves between them."""
+    rng = np.random.default_rng(seed)
+    n, pix = 128, 2.8125
+    yy, xx = np.mgrid[0:n, 0:n]
+    blob = lambda x, y, peak: peak * np.exp(-((xx - x) ** 2 + (yy - y) ** 2) / (2 * 1.1**2))  # noqa: E731
+    stars = [(rng.uniform(12, 116), rng.uniform(12, 116), rng.uniform(15, 120)) for _ in range(22)]
+    stars = [s for s in stars if abs(s[0] - 64) > 14 or abs(s[1] - 64) > 14]  # keep the middle clear for the mover
+    frames = []
+    for v, mjd0 in enumerate((60900.0, 61080.0)):
+        for k in range(12):
+            img = rng.normal(0.0, 1.0, (n, n))
+            for x, y, p in stars:
+                img += blob(x, y, p)
+            img += blob(64.0 + shift_px * v, 64.0, mover_peak)
+            frames.append(detect.Frame(f"V{v}E{k}", mjd0 + 0.05 * k, f"2025-01-0{v + 1}T00:00:{k:02d}", 4.5 + 0.03 * k, img, pix, 0.02))
+    return frames, pix
+
+
+def test_deep_search_finds_a_mover_too_faint_for_single_exposures():
+    # 4.5 times the noise in one exposure (below the 6-sigma detection limit); 3.2 grid pixels = 9 arcsec in six months
+    frames, pix = _made_up_visits(mover_peak=4.5, shift_px=3.2)
+    res = detect.detect(frames, 133.76, -7.24, 0.1)
+    deep = [d for d in res["doodles"] if d.get("deep")]
+    assert len(deep) == 1 and deep[0]["type"] == "arrow"
+    m = deep[0]["motion"]
+    assert m["dist_arcsec"] == pytest.approx(3.2 * pix, abs=1.5) and m["direction"] == "west"
+    assert deep[0]["deep"]["exposures"] == 24 and "added together" in deep[0]["explain"]
+    assert deep[0]["spectrum"]["faint"] is True and len(deep[0]["spectrum"]["binned"]) >= 2
+    # the same field with nothing moving: no deep find
+    still, _ = _made_up_visits(mover_peak=4.5, shift_px=0.0)
+    assert not [d for d in detect.detect(still, 133.76, -7.24, 0.1)["doodles"] if d.get("deep")]
