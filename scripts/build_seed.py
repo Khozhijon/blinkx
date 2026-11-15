@@ -48,6 +48,7 @@ def main() -> None:
             if res["truncated"]:
                 print(f"{name:20s} deep field, not seeded")
                 continue
+            res["saved_at"] = int(time.time())
             cache.put_seed(f"sia3/{ra:.5f}_{dec:.5f}", res)
             cache.put_json(f"sia3/{ra:.5f}_{dec:.5f}", res)
             ok += 1

@@ -190,3 +190,32 @@ def test_warm_up_never_raises(monkeypatch):
     monkeypatch.setattr(sx, "WARM", False)
     sx.warm_up()
     assert sx.WARM is True
+
+
+def test_saved_index_is_used_first_while_it_is_recent(tmp_path, monkeypatch):
+    import time as _time
+
+    from backend import cache
+
+    monkeypatch.setattr(cache, "CACHE_DIR", tmp_path / "cache")
+    monkeypatch.setattr(cache, "SEED_DIR", tmp_path / "seed")
+    monkeypatch.setattr(sx, "_irsa_down_until", 0.0)
+    rows = [{"id": "aD2", "obs_id": "a", "detector": 2, "collection": "spherex_dr1", "key": "dr1/a.fits", "mjd": 60900.0, "exptime": 113.6}]
+    calls = []
+    monkeypatch.setattr(sx, "_refresh_in_background", lambda ck, ra, dec: calls.append(ck))
+
+    def must_not_wait(*args, **kwargs):
+        raise AssertionError("a recent saved list must be returned without waiting for IRSA")
+
+    monkeypatch.setattr(sx, "_sia_all", must_not_wait)
+    cache.put_seed("sia3/10.00000_20.00000", {"exposures": rows, "truncated": False, "saved_at": int(_time.time()) - 3600})
+    res = sx.search(10.0, 20.0)
+    assert res["saved"] is True and res["exposures"] == rows and "stale" not in res
+    assert calls == ["sia3/10.00000_20.00000"]  # a fresh list is requested behind the scenes
+
+    # an old saved list is not trusted first: IRSA is asked
+    fresh = [dict(rows[0], id="bD2")]
+    monkeypatch.setattr(sx, "_sia_all", lambda ra, dec, detector=None: {"exposures": fresh, "truncated": False})
+    cache.put_seed("sia3/12.00000_20.00000", {"exposures": rows, "truncated": False, "saved_at": int(_time.time()) - 60 * 86400})
+    res = sx.search(12.0, 20.0)
+    assert res["exposures"] == fresh and "saved" not in res

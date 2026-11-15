@@ -80,6 +80,15 @@ def get_json_stale(key: str):
     return None
 
 
+def get_seed(key: str):
+    """The committed, read-only copy for a well-known target (None if there is none)."""
+    p = _path(key, "json", SEED_DIR)
+    try:
+        return json.loads(p.read_text()) if p.is_file() else None
+    except (OSError, ValueError):
+        return None
+
+
 def put_seed(key: str, obj) -> Path:
     p = _path(key, "json", SEED_DIR)
     p.parent.mkdir(parents=True, exist_ok=True)

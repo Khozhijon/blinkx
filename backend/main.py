@@ -106,6 +106,8 @@ def api_search(ra: float = RA, dec: float = DEC):
         "visits": [] if deep else _visits(exposures),
         "collections": list(sx.COLLECTIONS),
         "stale": bool(res.get("stale")),
+        # set when the exposure list came from the saved index rather than a live IRSA query
+        "saved_on": _iso(float(res["saved_at"]) / 86400.0 + 40587.0)[:10] if res.get("saved") and res.get("saved_at") else None,
     }
 
 

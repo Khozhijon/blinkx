@@ -230,6 +230,25 @@ def warm_up() -> None:
 
 
 WARM = False
+SEED_FRESH_DAYS = 21  # SPHEREx adds data weekly; a saved list older than this is no longer used first
+_refreshing: set[str] = set()
+
+
+def _refresh_in_background(ck: str, ra: float, dec: float) -> None:
+    """Ask IRSA for the current list without making anyone wait; the result lands in the cache."""
+    if ck in _refreshing or _irsa_recently_failed():
+        return
+    _refreshing.add(ck)
+
+    def run():
+        try:
+            cache.put_json(ck, _sia_all(ra, dec))
+        except Exception:  # noqa: BLE001 - the saved list is already being shown
+            _note_irsa_failure()
+        finally:
+            _refreshing.discard(ck)
+
+    threading.Thread(target=run, daemon=True).start()
 
 
 def search(ra: float, dec: float) -> dict:
@@ -238,11 +257,18 @@ def search(ra: float, dec: float) -> dict:
     ``truncated`` is True in the deep fields, where a position has tens of thousands of exposures and
     we stop at MAXREC rows; ``band_exposures`` then fetches one band completely.
     ``stale`` is True when IRSA did not answer and an earlier saved result is returned instead.
+    ``saved`` is True when the list comes from the saved index for well-known targets (seed/).
     """
     ck = f"sia3/{ra:.5f}_{dec:.5f}"
     hit = cache.get_json(ck, max_age=6 * 3600)
     if hit is not None:
         return hit
+    # Well-known targets: answer at once from the list saved with the code (IRSA can take 30 s),
+    # and fetch a fresh list in the background for the next visitor.
+    seed = cache.get_seed(ck)
+    if seed is not None and time.time() - float(seed.get("saved_at") or 0) < SEED_FRESH_DAYS * 86400:
+        _refresh_in_background(ck, ra, dec)
+        return {**seed, "saved": True}
     old = cache.get_json_stale(ck)
     if old is not None and _irsa_recently_failed():
         return {**old, "stale": True}
