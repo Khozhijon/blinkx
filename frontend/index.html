@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Blink X — watch the SPHEREx sky change</title>
+  <meta name="description" content="Blink real NASA SPHEREx infrared images of any spot in the sky, taken months apart, and catch what moved: asteroids, comets and nearby stars.">
+  <meta name="theme-color" content="#0a0d16">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0d16'/%3E%3Ccircle cx='12' cy='18' r='5' fill='%2355b8ff'/%3E%3Ccircle cx='21' cy='13' r='5' fill='%23ffa94d'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="./" aria-label="Blink X home">
+      <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+        <circle cx="12" cy="18" r="6" fill="#55b8ff"/><circle cx="21" cy="13" r="6" fill="#ffa94d" style="mix-blend-mode:screen"/>
+      </svg>
+      <span>Blink<b>X</b></span>
+    </a>
+    <p class="tagline">Watch the sky change in NASA’s SPHEREx infrared images.</p>
+    <button id="helpBtn" class="btn ghost" type="button">What am I looking at?</button>
+  </header>
+
+  <main>
+    <section class="card search" aria-label="Choose a place in the sky">
+      <form id="searchForm" autocomplete="off">
+        <label for="q">Where in the sky?</label>
+        <div class="row">
+          <input id="q" name="q" type="search" enterkeyhint="search" spellcheck="false"
+                 placeholder="A star or galaxy name, or RA Dec — e.g.  Barnard's star   or   269.4486 +4.7680">
+          <button class="btn primary" type="submit">Look</button>
+        </div>
+      </form>
+      <div class="examples">
+        <span class="label">Or try an example</span>
+        <div id="exampleList" class="chips"><span class="muted">Loading examples…</span></div>
+      </div>
+      <p id="apiState" class="api-state" hidden></p>
+    </section>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <section id="viewer" class="viewer" hidden>
+      <div class="viewer-head">
+        <div class="target">
+          <h1 id="targetName">—</h1>
+          <p id="targetMeta" class="muted"></p>
+        </div>
+        <div class="selectors">
+          <label>Infrared colour
+            <select id="band"></select>
+          </label>
+          <label>Field of view
+            <select id="size">
+              <option value="0.05">3′ (zoomed in)</option>
+              <option value="0.1">6′</option>
+              <option value="0.2">12′</option>
+              <option value="0.4">24′ (wide)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <p id="story" class="story" hidden></p>
+
+      <div class="tabs" role="tablist" aria-label="How to compare">
+        <button role="tab" data-mode="blink" aria-selected="true">Blink</button>
+        <button role="tab" data-mode="side" aria-selected="false">Side by side</button>
+        <button role="tab" data-mode="diff" aria-selected="false">Difference</button>
+        <button role="tab" data-mode="time" aria-selected="false">Time-lapse</button>
+      </div>
+      <p id="modeHint" class="mode-hint"></p>
+
+      <div id="stage" class="stage" data-mode="blink">
+        <figure class="pane" id="pane0">
+          <canvas id="cv0" width="128" height="128"></canvas>
+          <svg id="ov0" class="overlay" viewBox="0 0 128 128" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <figcaption id="cap0" class="cap"></figcaption>
+          <div id="load0" class="loading" hidden><span class="spinner"></span><span id="loadText">Loading…</span></div>
+        </figure>
+        <figure class="pane" id="pane1">
+          <canvas id="cv1" width="128" height="128"></canvas>
+          <svg id="ov1" class="overlay" viewBox="0 0 128 128" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <figcaption id="cap1" class="cap"></figcaption>
+        </figure>
+      </div>
+      <p id="readout" class="readout muted">Move over the image to read sky coordinates.</p>
+
+      <div class="transport">
+        <button id="playBtn" class="btn primary" type="button" aria-pressed="true">Pause</button>
+        <label class="grow" id="speedWrap">Speed
+          <input id="speed" type="range" min="0" max="100" value="55">
+        </label>
+        <label class="grow" id="timeWrap" hidden>Frame <output id="timeOut"></output>
+          <input id="timeSlider" type="range" min="0" max="0" value="0" step="1">
+        </label>
+      </div>
+
+      <div class="ab">
+        <label class="slot a"><span class="dot"></span>Earlier image (A)
+          <select id="selA"></select>
+        </label>
+        <button id="swapBtn" class="btn ghost" type="button" title="Swap A and B" aria-label="Swap A and B">⇄</button>
+        <label class="slot b"><span class="dot"></span>Later image (B)
+          <select id="selB"></select>
+        </label>
+      </div>
+      <p id="gap" class="gap muted"></p>
+
+      <div class="strip-head">
+        <h2>Every SPHEREx exposure of this spot <span id="stripCount" class="muted"></span></h2>
+        <div class="arm" role="group" aria-label="A tap on a picture sets">
+          <span class="muted">A tap sets</span>
+          <button type="button" data-arm="a" aria-pressed="false">A</button>
+          <button type="button" data-arm="b" aria-pressed="true">B</button>
+        </div>
+      </div>
+      <div id="strip" class="strip" tabindex="0" aria-label="All exposures, oldest first"></div>
+
+      <div class="tuning card">
+        <label>Brightness
+          <input id="hi" type="range" min="0" max="100" value="50">
+        </label>
+        <label>Black level
+          <input id="lo" type="range" min="0" max="100" value="30">
+        </label>
+        <label>Colours
+          <select id="cmap">
+            <option value="gray">White on black</option>
+            <option value="invert">Black on white</option>
+            <option value="heat">Heat</option>
+          </select>
+        </label>
+        <div class="checks">
+          <label><input id="match" type="checkbox" checked> Match star brightness</label>
+          <label><input id="smooth" type="checkbox" checked> Smooth pixels</label>
+          <label><input id="cross" type="checkbox" checked> Crosshair</label>
+          <label><input id="known" type="checkbox"> Label known asteroids &amp; comets</label>
+          <label><input id="showFilled" type="checkbox"> Show repaired pixels</label>
+        </div>
+        <div class="actions">
+          <button id="markBtn" class="btn ghost" type="button" aria-pressed="false">＋ Mark a mover</button>
+          <button id="shareBtn" class="btn ghost" type="button">Copy link to this view</button>
+          <button id="resetBtn" class="btn ghost" type="button">Reset display</button>
+        </div>
+      </div>
+
+      <div id="marks" class="marks card" hidden>
+        <h2>Your marks</h2>
+        <p class="muted">Tap the image where you think something moved. Marks stay on this device; copy them to share with others.</p>
+        <ol id="markList"></ol>
+        <div class="actions">
+          <button id="copyMarks" class="btn ghost" type="button">Copy as text</button>
+          <button id="clearMarks" class="btn ghost" type="button">Clear</button>
+        </div>
+      </div>
+
+      <div id="facts" class="facts"></div>
+    </section>
+
+    <section id="explain" class="card explain">
+      <h2>What am I looking at?</h2>
+      <div class="explain-grid">
+        <div>
+          <h3>Real pictures from space</h3>
+          <p><strong>SPHEREx</strong> is a NASA space telescope that photographs the entire sky about every six months, in 102 colours of infrared light that our eyes can’t see. Every picture here is a small square cut out of a real SPHEREx exposure. North is up, east is left, and the date on each picture is read straight from the image file.</p>
+        </div>
+        <div>
+          <h3>Why blink?</h3>
+          <p>Distant stars and galaxies stay put. Things that are close to us — asteroids, comets, the nearest stars — drift across them. Flip quickly between two pictures of the same spot and whatever moved seems to jump. Clyde Tombaugh found Pluto this way in 1930, with two glass photographs and a machine called a blink comparator.</p>
+        </div>
+        <div>
+          <h3>Four ways to compare</h3>
+          <p><strong>Blink</strong> flips between an earlier picture (A) and a later one (B). <strong>Side by side</strong> shows both at once. <strong>Difference</strong> subtracts A from B: anything new glows <span class="c-b">orange</span>, anything that left turns <span class="c-a">blue</span>, and everything that stayed the same fades to black. <strong>Time-lapse</strong> plays every exposure in order.</p>
+        </div>
+        <div>
+          <h3>Things that can fool you</h3>
+          <p>Each exposure sees a slightly different infrared colour, so a star can look brighter in one picture than another. Very bright stars leave rings and blocky cores in the difference view. Pixels that NASA’s pipeline flagged as bad (cosmic-ray hits, dead pixels) are filled in from their neighbours — tick “Show repaired pixels” to see which.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Images: NASA / JPL-Caltech / IPAC — SPHEREx Level-2 spectral images (DR1 and QR3) from the
+      <a href="https://irsa.ipac.caltech.edu/Missions/spherex.html" target="_blank" rel="noopener">NASA/IPAC Infrared Science Archive</a>.
+      Names resolved by <a href="https://cds.unistra.fr/cgi-bin/Sesame" target="_blank" rel="noopener">CDS Sesame</a>;
+      known asteroids from <a href="https://ssp.imcce.fr/webservices/skybot/" target="_blank" rel="noopener">IMCCE SkyBoT</a>.</p>
+    <p>Built by team KhoFra for the NASA Space Apps Challenge 2026 — “Planet X and SPHEREx”. Not an official NASA product.</p>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

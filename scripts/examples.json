@@ -1,0 +1,21 @@
+[
+  {
+    "slug": "barnards-star",
+    "kind": "star",
+    "title": "Barnard's Star",
+    "blurb": "The fastest-moving star in our sky, caught a year apart.",
+    "story": "Barnard's Star is a small red star only six light-years away. It crosses the sky faster than any other star: about 10 arcseconds a year. Watch the bright star in the middle step upward (north) between August 2025 and September 2026 while everything else stays still.",
+    "name": "Barnard's Star",
+    "ra": 269.446224,
+    "dec": 4.76878,
+    "size": 0.05,
+    "band": 2,
+    "mode": "blink",
+    "frames": {
+      "near_um": 1.51,
+      "tol": 0.085
+    },
+    "a": "2025W35_1A_0146_1D2",
+    "b": "2026W39_1A_0371_1D2"
+  }
+]
