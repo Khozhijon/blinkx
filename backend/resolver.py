@@ -30,7 +30,10 @@ class ResolveError(ValueError):
 
 def parse_position(text: str) -> tuple[float, float] | None:
     """RA/Dec in degrees if ``text`` looks like coordinates, else None."""
-    t = text.strip().replace(",", " ")
+    t = text.strip().replace(",", " ").replace("−", "-").replace("–", "-")
+    # words people (and the challenge text) put around the numbers: "Right Ascension 08h55m10.831s, declination -7d14m42.53s"
+    t = re.sub(r"(?i)\b(right\s+ascension|declination|ra|dec|j2000|icrs|and)\b\s*[:=]?", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
     m = re.fullmatch(rf"({_NUM})\s+({_NUM})", t)
     if m:
         ra, dec = float(m.group(1)), float(m.group(2))
@@ -77,6 +80,23 @@ def _sesame(name: str) -> dict | None:
     raise ResolveError(f"The name service (CDS Sesame) is not reachable right now ({type(last).__name__}).")
 
 
+# Everyday names the name service does not know, starting with the objects the challenge text asks to test.
+ALIASES = {
+    "wise 0855": "WISE J085510.83-071442.5", "wise 0855-0714": "WISE J085510.83-071442.5", "wise0855": "WISE J085510.83-071442.5",
+    "w0855": "WISE J085510.83-071442.5", "wise j0855-0714": "WISE J085510.83-071442.5", "wise 0855−0714": "WISE J085510.83-071442.5",
+    "epsilon indi b": "eps Ind B", "eps indi b": "eps Ind B", "epsilon ind b": "eps Ind B", "epsilon indi ba": "eps Ind B", "epsilon indi bb": "eps Ind B",
+    "epsilon indi": "eps Ind", "rw aurigae": "RW Aur", "r draconis": "R Dra", "barnards star": "Barnard's star", "barnard star": "Barnard's star",
+    "luhman 16": "Luhman 16", "proxima": "Proxima Centauri",
+}
+
+
+def canonical_name(q: str) -> str:
+    """The spelling to ask the name service for: straight apostrophes, and the aliases above."""
+    q = re.sub(r"[’‘`´]", "'", q)
+    key = q.lower().strip()
+    return ALIASES.get(key) or ALIASES.get(key.replace("'", "")) or q
+
+
 def resolve(query: str) -> dict:
     """Resolve coordinates or an object name. Raises ResolveError with a human message."""
     q = " ".join(query.split())
@@ -86,11 +106,13 @@ def resolve(query: str) -> dict:
     if pos:
         return {"query": q, "kind": "coordinates", "name": None, "ra": round(pos[0], 6), "dec": round(pos[1], 6)}
 
-    ck = "resolve/" + q.lower()
+    asked = canonical_name(q)
+    ck = "resolve/" + asked.lower()
     hit = cache.get_json(ck, max_age=30 * 86400)
     if hit is None:
-        hit = _sesame(q) or {}
-        cache.put_json(ck, hit)
+        hit = _sesame(asked) or {}
+        if hit:  # "not found" is not remembered: the name service may simply have been down
+            cache.put_json(ck, hit)
     if not hit:
         raise ResolveError(
             f"Couldn't find “{q}”. Try another spelling, or coordinates like “269.4486 +4.7680”. "

@@ -277,3 +277,15 @@ def test_pointing_geometry_on_a_made_up_pointing(monkeypatch):
     assert {e["detector"] for e in side} == {3, 6}
     # ten degrees away: nothing
     assert pointings.covering(110.0, 0.0)["exposures"] == []
+
+
+def test_coordinates_and_names_as_the_challenge_writes_them():
+    from backend import resolver
+
+    ra, dec = resolver.parse_position("Right Ascension 08h55m10.831s, declination -7d14m42.53s")
+    assert ra == pytest.approx(133.795129, abs=1e-5) and dec == pytest.approx(-7.245147, abs=1e-5)
+    assert resolver.parse_position("RA 133.79513, Dec −7.24515") == pytest.approx((133.79513, -7.24515))
+    assert resolver.parse_position("R Dra") is None and resolver.parse_position("RW Aurigae") is None
+    assert resolver.canonical_name("Barnard’s Star") == "Barnard's star" and resolver.canonical_name("Vega’s twin") == "Vega's twin"
+    assert resolver.canonical_name("WISE 0855") == "WISE J085510.83-071442.5"
+    assert resolver.canonical_name("Epsilon Indi B") == "eps Ind B" and resolver.canonical_name("R Draconis") == "R Dra"
